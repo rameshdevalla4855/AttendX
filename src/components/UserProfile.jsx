@@ -1,8 +1,38 @@
-import { X, LogOut, Phone, Mail, User, BookOpen, Hash, Briefcase } from 'lucide-react';
+import { X, LogOut, Phone, Mail, User, BookOpen, Hash, Briefcase, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { updatePassword } from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { toast } from 'sonner';
 
 export default function UserProfile({ isOpen, onClose, profile, onLogout, role = 'student' }) {
     // if (!profile) return null; // REMOVED to allow logout even if profile is missing
+
+    const [newPassword, setNewPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleChangePassword = async () => {
+        if (!newPassword || newPassword.length < 6) {
+            toast.error("Password must be at least 6 characters.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                await updatePassword(user, newPassword);
+                toast.success("Password updated successfully!");
+                setNewPassword('');
+            } else {
+                toast.error("No active user found.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Error updating password. Requires recent login.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const safeProfile = profile || { name: "Unknown User", rollNumber: "N/A", dept: "N/A", year: "N/A", email: "N/A", mobile: "N/A", parentMobile: "N/A", designation: "N/A", facultyId: "N/A", hodId: "N/A", securityId: "N/A" };
     const isStudent = role === 'student';
@@ -99,14 +129,37 @@ export default function UserProfile({ isOpen, onClose, profile, onLogout, role =
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="p-6 bg-gray-50 border-t">
+                        {/* Footer - Password & Logout */}
+                        <div className="p-6 bg-gray-50 border-t space-y-4">
+                            {/* Change Password Section */}
+                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                    <Lock size={16} className="text-indigo-500" /> Change Password
+                                </h3>
+                                <div className="space-y-3">
+                                    <input
+                                        type="password"
+                                        placeholder="New Password (min 6 chars)"
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                    />
+                                    <button
+                                        onClick={handleChangePassword}
+                                        disabled={loading}
+                                        className="w-full py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                                    >
+                                        {loading ? "Updating..." : "Update Password"}
+                                    </button>
+                                </div>
+                            </div>
+
                             <button
                                 onClick={onLogout}
-                                className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-all shadow-md font-semibold"
+                                className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 py-3 rounded-xl hover:bg-red-100 transition-all font-bold border border-red-100"
                             >
                                 <LogOut size={20} />
-                                Logout
+                                Sign Out
                             </button>
                         </div>
                     </motion.div>

@@ -220,5 +220,112 @@ export const academicService = {
         const docRef = doc(db, 'timetables', docId);
         const docSnap = await getDoc(docRef);
         return docSnap.exists() ? docSnap.data() : null;
+    },
+
+    /**
+     * SUBJECT-WISE ATTENDANCE SYSTEM
+     */
+    getAttendancePeriod: async (periodId) => {
+        const docRef = doc(db, 'attendance_periods', periodId);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? docSnap.data() : null;
+    },
+
+    submitAttendance: async (periodData) => {
+        const docRef = doc(db, 'attendance_periods', periodData.periodId);
+        await setDoc(docRef, {
+            ...periodData,
+            timestamp: serverTimestamp()
+        }, { merge: true });
+    },
+
+    getStudentSubjectAttendance: async (branch, year, section, subjectCode) => {
+        const q = query(
+            collection(db, 'attendance_periods'),
+            where("branch", "==", branch),
+            where("year", "==", Number(year)),
+            where("section", "==", section),
+            where("subjectCode", "==", subjectCode)
+        );
+
+        try {
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) {
+            console.error("Error fetching subject attendance:", e);
+            return [];
+        }
+    },
+
+    getStudentOverallAttendance: async (branch, year, section, studentRoll, studentId) => {
+        const q = query(
+            collection(db, 'attendance_periods'),
+            where("branch", "==", branch),
+            where("year", "==", Number(year)),
+            where("section", "==", section)
+        );
+
+        try {
+            const snapshot = await getDocs(q);
+            let total = 0;
+            let present = 0;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const records = data.records || {};
+
+                // Check both keys (Roll Number takes precedence if both exist, which shouldn't happen)
+                const status = records[studentRoll] || records[studentId];
+
+                if (status === 'P') {
+                    present++;
+                    total++;
+                } else if (status === 'A') {
+                    total++;
+                }
+            });
+
+            const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+            return { total, present, percentage };
+
+        } catch (e) {
+            console.error("Error fetching overall attendance:", e);
+            return { total: 0, present: 0, percentage: 0 };
+        }
+    },
+
+    getClassStudents: async (branch, year, section) => {
+        const studentsRef = collection(db, 'students');
+
+        // Query by 'branch' (standardized via import script)
+        const q = query(
+            studentsRef,
+            where("branch", "==", branch)
+        );
+
+        try {
+            const snapshot = await getDocs(q);
+            const students = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            return students.filter(s => {
+                const sYear = String(s.year || s.Year).replace(/\D/g, '');
+                let sSection = s.section || s.Section || 'A';
+
+                const sectionMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', 'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D' };
+                const normalize = (val) => {
+                    const str = String(val).toUpperCase();
+                    return sectionMap[str] || str;
+                };
+
+                const normalizedQuerySection = normalize(section);
+                const normalizedStudentSection = normalize(sSection);
+
+                return Number(sYear) === Number(year) &&
+                    normalizedStudentSection === normalizedQuerySection;
+            });
+        } catch (e) {
+            console.error("Error fetching class students:", e);
+            return [];
+        }
     }
 };

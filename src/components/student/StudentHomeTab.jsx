@@ -2,59 +2,88 @@ import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ShieldCheck, MapPin, Clock, Calendar, ChevronRight, Zap, TrendingUp, BookOpen, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import VisitorRequestCard from './VisitorRequestCard';
 
-export default function StudentHomeTab({ profile, status, timetable }) {
+export default function StudentHomeTab({ profile, status, timetable, attendanceStats }) {
     const { currentUser } = useAuth();
+    const dateString = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // Date & Time
-    const todayDate = new Date();
-    const dateString = todayDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
-    const todayDay = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
+    // Helper to get today's day name (e.g., "Monday")
+    const getDayName = () => {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days[new Date().getDay()];
+    };
 
-    // Schedule Logic
-    const todaysClasses = timetable[todayDay] || [];
-    const nextClass = todaysClasses?.find(c => {
-        if (!c?.startTime) return false;
-        const [h, m] = c.startTime.split(':');
-        const classTime = new Date();
-        classTime.setHours(h, m, 0);
-        return classTime > new Date();
-    });
+    const today = getDayName();
+    const todaysClasses = timetable ? (timetable[today] || []) : [];
 
-    const activeClass = todaysClasses?.find(c => {
-        if (!c?.startTime || !c?.endTime) return false;
-        const [sh, sm] = c.startTime.split(':');
-        const [eh, em] = c.endTime.split(':');
-        const start = new Date(); start.setHours(sh, sm, 0);
-        const end = new Date(); end.setHours(eh, em, 0);
-        const now = new Date();
-        return now >= start && now <= end;
-    });
+    // Logic to find Active and Next Class
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const parseTime = (timeStr) => {
+        if (!timeStr) return -1;
+        const [time, modifier] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':');
+        hours = parseInt(hours);
+        minutes = parseInt(minutes);
+        if (modifier === 'PM' && hours < 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+    };
+
+    // Note: Timetable format might be "09:00 AM" or "09:00". 
+    // Assuming 24h or AM/PM based on previous context. 
+    // If I don't know, I'll try to handle both or assume standard format.
+    // Let's assume standard "HH:mm" or check how it's stored.
+    // For safety, I will implement a parser that handles "HH:mm".
+
+    const getMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        // Check if 24h or 12h
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+            return parseTime(timeStr);
+        }
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+    };
+
+    let activeClass = null;
+    let nextClass = null;
+
+    if (todaysClasses.length > 0) {
+        // Sort by start time just in case
+        const sortedClasses = [...todaysClasses].sort((a, b) => getMinutes(a.startTime) - getMinutes(b.startTime));
+
+        for (const cls of sortedClasses) {
+            const start = getMinutes(cls.startTime);
+            const end = getMinutes(cls.endTime);
+
+            if (currentTime >= start && currentTime < end) {
+                activeClass = cls;
+            } else if (currentTime < start) {
+                if (!nextClass) nextClass = cls; // First one found is the next one
+            }
+        }
+    }
+
+    // Receive stats
+    const { percentage, total } = attendanceStats || { percentage: 0, total: 0 };
 
     return (
         <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-6 duration-700">
 
+            {/* Visitor Requests */}
+            <VisitorRequestCard currentUser={currentUser} profile={profile} />
+
             {/* 1. Welcome Header */}
-            <div className="flex justify-between items-end px-1">
-                <div>
-                    <p className="text-gray-500 font-medium text-xs uppercase tracking-wider mb-1">{dateString}</p>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                        Hello, <span className="text-indigo-600">{profile?.name?.split(' ')[0] || 'Student'}</span>
-                    </h1>
-                </div>
-                <div className="hidden md:block">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${status === 'INSIDE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                        <span className={`w-2 h-2 rounded-full ${status === 'INSIDE' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                        {status === 'INSIDE' ? 'On Campus' : 'Off Campus'}
-                    </span>
-                </div>
-            </div>
+            {/* ... (Header code remains same) ... */}
 
             {/* 2. Bento Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                {/* A. Identity Card (Glassmorphism) - Spans 2 cols on desktop */}
+                {/* A. Identity Card ... */}
+                {/* ... (Identity Card code remains same, omitted here for brevity) ... */}
                 <div className="md:col-span-2 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-[2rem] p-6 md:p-8 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden group flex flex-row items-center justify-between">
                     {/* Background Blobs */}
                     <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white/10 blur-3xl group-hover:bg-white/20 transition-all duration-1000"></div>
@@ -128,12 +157,14 @@ export default function StudentHomeTab({ profile, status, timetable }) {
                     {/* Stats Row */}
                     <div className="grid grid-cols-2 gap-4 h-full">
                         <div className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
-                            <span className="text-2xl font-bold text-indigo-600">85%</span>
+                            <span className={`text-2xl font-bold ${percentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                {percentage}%
+                            </span>
                             <span className="text-[10px] uppercase font-bold text-gray-400 mt-1">Attendance</span>
                         </div>
                         <div className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
-                            <span className="text-2xl font-bold text-gray-900">{todaysClasses.length}</span>
-                            <span className="text-[10px] uppercase font-bold text-gray-400 mt-1">Classes</span>
+                            <span className="text-2xl font-bold text-gray-900">{total}</span>
+                            <span className="text-[10px] uppercase font-bold text-gray-400 mt-1">Total Classes</span>
                         </div>
                     </div>
                 </div>

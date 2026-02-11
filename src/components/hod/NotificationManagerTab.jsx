@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { Send, Users, UserCheck, Bell, MessageSquare, Clock, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function NotificationManagerTab({ profile, role = 'hod' }) {
@@ -33,15 +33,37 @@ export default function NotificationManagerTab({ profile, role = 'hod' }) {
             );
             const snap = await getDocs(q);
 
-            // Client-side Sort & Limit
+            // Client-side Sort
             const sorted = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
-                .sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0))
-                .slice(0, 10);
+                .sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
 
-            setRecentNotifications(sorted);
+            setRecentNotifications(sorted.slice(0, 10));
+            cleanupExpired(sorted);
         } catch (err) {
             console.error("Error fetching recent notifications:", err);
+        }
+    };
+
+    const cleanupExpired = async (notifications) => {
+        const now = new Date();
+        const expired = notifications.filter(n => {
+            if (!n.expiresAt) return false;
+            const exp = n.expiresAt.toDate ? n.expiresAt.toDate() : new Date(n.expiresAt);
+            return exp < now;
+        });
+
+        if (expired.length > 0) {
+            console.log(`Cleaning up ${expired.length} expired notifications...`);
+            for (const n of expired) {
+                try {
+                    await deleteDoc(doc(db, "notifications", n.id));
+                } catch (e) {
+                    console.error("Cleanup failed for", n.id, e);
+                }
+            }
+            // Refresh
+            fetchRecent();
         }
     };
 
@@ -88,6 +110,7 @@ export default function NotificationManagerTab({ profile, role = 'hod' }) {
                 targetRole, // 'student', 'faculty', 'all'
                 targetDept: dept, // Locked to sender's dept
                 timestamp: serverTimestamp(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 Hours from now
                 readBy: []
             };
 
@@ -122,8 +145,9 @@ export default function NotificationManagerTab({ profile, role = 'hod' }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left: Compose Form */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -220,47 +244,131 @@ export default function NotificationManagerTab({ profile, role = 'hod' }) {
                     </form>
                 </div>
 
-                {/* Right: Recent History */}
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 h-fit">
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Clock size={16} /> Recent Broadcasts
-                    </h3>
+                {/* Right Column: History & Alerts */}
+                <div className="space-y-6 h-fit">
 
-                    <div className="space-y-4">
-                        {recentNotifications.length === 0 ? (
-                            <p className="text-sm text-gray-400 italic text-center py-8">No messages sent yet.</p>
-                        ) : (
-                            recentNotifications.map(notif => (
-                                <div key={notif.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide ${notif.targetRole === 'student' ? 'bg-indigo-100 text-indigo-700' :
-                                            notif.targetRole === 'faculty' ? 'bg-purple-100 text-purple-700' :
-                                                'bg-gray-100 text-gray-700'
-                                            }`}>
-                                            To: {notif.targetRole}
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-gray-400">
-                                                {notif.timestamp?.toDate ? notif.timestamp.toDate().toLocaleDateString() : 'Just now'}
+                    {/* Recent Broadcasts */}
+                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <Clock size={16} /> Recent Broadcasts
+                        </h3>
+
+                        <div className="space-y-4">
+                            {recentNotifications.length === 0 ? (
+                                <p className="text-sm text-gray-400 italic text-center py-8">No messages sent yet.</p>
+                            ) : (
+                                recentNotifications.map(notif => (
+                                    <div key={notif.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide ${notif.targetRole === 'student' ? 'bg-indigo-100 text-indigo-700' :
+                                                notif.targetRole === 'faculty' ? 'bg-purple-100 text-purple-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                To: {notif.targetRole}
                                             </span>
-                                            <button
-                                                onClick={() => handleDelete(notif.id)}
-                                                className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                                                title="Delete Notification"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-gray-400">
+                                                    {notif.timestamp?.toDate ? notif.timestamp.toDate().toLocaleDateString() : 'Just now'}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleDelete(notif.id)}
+                                                    className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                                    title="Delete Notification"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
+                                        <h4 className="font-semibold text-gray-900 text-sm mb-1 pr-6">{notif.title}</h4>
+                                        <p className="text-xs text-gray-500 line-clamp-2">{notif.message}</p>
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm mb-1 pr-6">{notif.title}</h4>
-                                    <p className="text-xs text-gray-500 line-clamp-2">{notif.message}</p>
-                                </div>
-                            ))
-                        )}
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm animate-in fade-in slide-in-from-right-2 duration-700">
+                        <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                            <AlertCircle size={16} /> Bunking Reports
+                        </h3>
+                        <BunkerAlertsList dept={profile?.dept || profile?.Department} />
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BunkerAlertsList({ dept }) {
+    const [alerts, setAlerts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!dept) return;
+
+        // Query Security Alerts (Fetch recent 20, filter BUNKING client-side to avoid Index error)
+        const q = query(
+            collection(db, "securityAlerts"),
+            orderBy("timestamp", "desc"),
+            limit(20)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Client Filter: Type == BUNKING AND (Dept match or ALL)
+            const filtered = data.filter(a => {
+                if (a.type !== 'BUNKING') return false;
+
+                // Normalize depts for comparison (remove non-alphanumeric, uppercase)
+                const alertDept = (a.dept || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                const myDept = (dept || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+                // Check for loose matches (e.g. AID vs AIDS)
+                const isDeptMatch = !alertDept || alertDept === 'ALL' ||
+                    alertDept === myDept ||
+                    (myDept.length > 0 && alertDept.includes(myDept)) ||
+                    (alertDept.length > 0 && myDept.includes(alertDept));
+
+                return isDeptMatch;
+            });
+
+            setAlerts(filtered.slice(0, 10)); // Take top 10 after filtering
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [dept]);
+
+    if (loading) return <div className="text-sm text-gray-400 py-4">Loading alerts...</div>;
+
+    if (alerts.length === 0) {
+        return (
+            <div className="text-sm text-gray-500 italic bg-white/50 p-4 rounded-lg border border-red-100/50">
+                No active bunking reports in your department.
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+            {alerts.map(alert => (
+                <div key={alert.id} className="bg-white px-3 py-2 rounded-lg border-l-4 border-red-500 shadow-sm flex items-center justify-between hover:bg-red-50/50 transition-colors group">
+                    <div className="flex flex-col min-w-0 flex-1 mr-3">
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-bold text-gray-900 text-sm truncate">{alert.name}</span>
+                            <span className="text-[10px] text-gray-400 font-mono">({alert.rollNumber})</span>
+                        </div>
+                        <p className="text-xs text-gray-600 italic truncate group-hover:text-gray-900 transition-colors">"{alert.reason}"</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[10px] font-mono bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100 font-medium">
+                            {alert.timestamp?.toDate ? alert.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                        </span>
                     </div>
                 </div>
-
-            </div>
+            ))}
         </div>
     );
 }

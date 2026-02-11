@@ -1,11 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { AlertOctagon, RefreshCw, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { db } from '../../services/firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 
 export default function AlertsTab() {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const cleanupExpired = async (list) => {
+        const now = new Date();
+        const expired = list.filter(a => {
+            if (!a.expiresAt) return false;
+            const exp = a.expiresAt.toDate ? a.expiresAt.toDate() : new Date(a.expiresAt);
+            return exp < now;
+        });
+
+        if (expired.length > 0) {
+            console.log(`Cleaning up ${expired.length} expired alerts...`);
+            for (const a of expired) {
+                try {
+                    await deleteDoc(doc(db, "securityAlerts", a.id));
+                } catch (e) {
+                    console.error("Cleanup failed:", e);
+                }
+            }
+        }
+    };
 
     useEffect(() => {
         const q = query(
@@ -19,8 +39,21 @@ export default function AlertsTab() {
                 id: doc.id,
                 ...doc.data()
             }));
-            setAlerts(data);
+
+            // Filter valid for display (Exclude BUNKING alerts)
+            const valid = data.filter(a => {
+                if (a.type === 'BUNKING') return false; // Hide bunking alerts from security view
+
+                if (!a.expiresAt) return true;
+                const exp = a.expiresAt.toDate ? a.expiresAt.toDate() : new Date(a.expiresAt);
+                return exp > new Date();
+            });
+
+            setAlerts(valid);
             setLoading(false);
+
+            // Trigger cleanup of ALL fetched (including expired)
+            cleanupExpired(data);
         });
 
         return () => unsubscribe();

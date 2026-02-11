@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QrScanner from '../../components/QrScanner';
 import { db } from '../../services/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { logAttendance, getLastAttendance, clearAllAttendanceLogs, logSecurityAlert } from '../../utils/dbUtils';
 import { CheckCircle, XCircle, AlertTriangle, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react';
 import { sendSMS } from '../../services/smsService';
@@ -87,21 +87,98 @@ export default function ScannerTab({ currentUser }) {
 
     const processScan = async (decodedText) => {
         const now = Date.now();
-        // Hard Lock: Ignore duplicate calls within 3s
         if (now - lastProcessTimeRef.current < 3000 || isProcessingRef.current) {
             return;
         }
 
-        // Lock
         lastProcessTimeRef.current = now;
         isProcessingRef.current = true;
-
 
         setScanResult(decodedText);
         setScanStatus('processing');
         setFeedbackMessage('Verifying ID...');
 
         try {
+            // --- VISITOR LOGIC ---
+            if (decodedText.startsWith('VISIT-')) {
+                const q = query(collection(db, "visitorVisits"), where("qrCode", "==", decodedText));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    throw new Error("Invalid Visitor Pass");
+                }
+
+                const docRef = snapshot.docs[0].ref;
+                const visitData = snapshot.docs[0].data();
+
+                // Check Date Validity (Optional, but good practice)
+                const today = new Date().toLocaleDateString('en-CA');
+                if (visitData.date !== today) {
+                    throw new Error("Pass Expired (Wrong Date)");
+                }
+
+                if (visitData.status === 'PENDING') {
+                    // ENTRY SCAN
+                    await logAttendance(visitData.visitorId, 'visitor', 'ENTRY', currentUser.uid, {
+                        name: visitData.visitorName,
+                        dept: 'VISITOR',
+                        purpose: visitData.purpose,
+                        student: visitData.studentName,
+                        rollNumber: visitData.qrCode // Store QR as ID
+                    });
+
+                    // Update Visit Status
+                    await updateDoc(docRef, {
+                        status: 'WAITING_APPROVAL',
+                        entryTime: serverTimestamp(),
+                        securityId: currentUser.uid
+                    });
+
+                    setScannedUser({ name: visitData.visitorName, role: 'Visitor', dept: 'Waiting Approval' });
+                    setScanStatus('warning'); // Orange for waiting
+                    setFeedbackMessage('Entry Recorded. Waiting for Student Approval.');
+                    playSuccessSound();
+
+                } else if (visitData.status === 'APPROVED') {
+                    // EXIT SCAN
+                    await logAttendance(visitData.visitorId, 'visitor', 'EXIT', currentUser.uid, {
+                        name: visitData.visitorName,
+                        dept: 'VISITOR',
+                        rollNumber: visitData.qrCode // Store QR as ID
+                    });
+
+                    await updateDoc(docRef, {
+                        status: 'EXITED',
+                        exitTime: serverTimestamp()
+                    });
+
+                    setScannedUser({ name: visitData.visitorName, role: 'Visitor', dept: 'Exit Approved' });
+                    setScanStatus('success');
+                    setFeedbackMessage('Exit Approved. Goodbye!');
+                    playSuccessSound();
+
+                } else if (visitData.status === 'WAITING_APPROVAL') {
+                    setScannedUser({ name: visitData.visitorName, role: 'Visitor', dept: 'Pending' });
+                    setScanStatus('warning');
+                    setFeedbackMessage('Already Checked In. Student approval pending.');
+                } else if (visitData.status === 'REJECTED') {
+                    throw new Error("Entry Rejected by Student.");
+                } else if (visitData.status === 'EXITED') {
+                    throw new Error("Pass Expired (Already Exited)");
+                }
+
+                // Reset
+                setTimeout(() => {
+                    setScanStatus('idle');
+                    setFeedbackMessage('Ready to Scan');
+                    setScanResult(null);
+                    setScannedUser(null);
+                    isProcessingRef.current = false;
+                }, 3500); // Longer delay for reading status
+                return;
+            }
+
+            // --- STUDENT / FACULTY LOGIC ---
             const userData = await lookupUser(decodedText);
 
             if (!userData) {
@@ -229,6 +306,33 @@ export default function ScannerTab({ currentUser }) {
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_20px_#818cf8] animate-[scan_2.5s_ease-in-out_infinite] z-10 pointer-events-none"></div>
                     )}
                 </div>
+            </div>
+
+            {/* Manual Entry Fallback */}
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center z-30 px-4">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const val = e.target.manualInput.value.trim();
+                        if (val) processScan(val);
+                        e.target.reset();
+                    }}
+                    className="flex gap-2 w-full max-w-sm bg-white/10 backdrop-blur-md p-2 rounded-xl border border-white/10"
+                >
+                    <input
+                        name="manualInput"
+                        type="text"
+                        placeholder="Or enter code manually..."
+                        className="flex-1 bg-transparent border-none text-white placeholder-white/50 focus:ring-0 text-sm"
+                        autoComplete="off"
+                    />
+                    <button
+                        type="submit"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                    >
+                        Check
+                    </button>
+                </form>
             </div>
 
             {/* Success/Error Feedback Overlay - No Changes Needed Here */}

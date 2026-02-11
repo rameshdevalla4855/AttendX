@@ -124,7 +124,8 @@ export const logSecurityAlert = async (alertData) => {
         await addDoc(alertsRef, {
             ...alertData,
             timestamp: serverTimestamp(),
-            date: new Date().toLocaleDateString('en-CA')
+            date: new Date().toLocaleDateString('en-CA'),
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Auto-delete after 24 hours
         });
         return { success: true };
     } catch (error) {

@@ -49,9 +49,17 @@ async function uploadData() {
             rollNumber: row["RollNO"] || row["rollNumber"],
             name: row["Name"] || row["name"],
             email: row["Email"] || row["email"],
-            dept: row["Branch"] || row["dept"],
-            departmentGroup: row["Department"] || "N/A",
+            dept: row["Department"] || "N/A", // Map Department to dept (User request: put branch instead of departmentgroup, wait user said "put the branch instead of departmentgroup")
+            // Actually user said: "instead of the branch iam seeing department group ....make changes ... so that it pu the branch instead of departmentgroup"
+            // Start again: User wants "Branch" from JSON to be the main field.
+
+            branch: row["Branch"] || row["branch"] || row["dept"], // NEW standardized field
+            dept: row["Branch"] || row["dept"], // Keep for legacy compatibility if needed, but map to Branch
+            departmentGroup: row["Department"] || "N/A", // Keep for reference
+
             year: row["year"],
+            section: row["Section"] || row["section"] || "1", // NEW: Add Section (Default A)
+
             mobile: row["Mobile No"] || row["mobile"] || null,
             barcodeId: row["Bio Metric Code"] || row["barcodeId"] || null,
             parentMobile: row["Parent No "] || row["Parent No"] || row["parentMobile"] || null,

@@ -57,32 +57,39 @@ export default function UserAttendanceHistory() {
         <div className="space-y-4">
             {logs.map((log, index) => {
                 const isEntry = log.type === 'ENTRY';
+                // Enhanced Date Format: "Monday, Oct 24"
+                const fullDate = log.timestamp?.toDate().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) || 'N/A';
+
                 return (
-                    <div key={log.id} className="group flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 relative">
+                    <div key={log.id} className="group flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 relative">
                         {/* Timeline Connector */}
                         {index !== logs.length - 1 && (
-                            <div className="absolute left-[19px] top-10 bottom-[-10px] w-0.5 bg-gray-100 group-hover:bg-gray-200 transition-colors"></div>
+                            <div className="absolute left-[27px] top-12 bottom-[-16px] w-0.5 bg-gray-100 group-hover:bg-gray-200 transition-colors"></div>
                         )}
 
                         {/* Icon Badge */}
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-opacity-20 shrink-0 z-10 ${isEntry ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                            {isEntry ? <ArrowDownRight size={20} /> : <ArrowUpRight size={20} />}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm shrink-0 z-10 ${isEntry ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                            {isEntry ? <ArrowDownRight size={20} strokeWidth={2.5} /> : <ArrowUpRight size={20} strokeWidth={2.5} />}
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1">
-                            <div className="flex justify-between items-center mb-1">
-                                <h4 className={`font-semibold text-sm ${isEntry ? 'text-green-700' : 'text-orange-700'}`}>
-                                    {isEntry ? 'Check In' : 'Check Out'}
-                                </h4>
-                                <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                    {log.time}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <Calendar size={12} />
-                                <span>{log.dateString}</span>
-                                {log.isLate && <span className="text-red-500 font-bold ml-2">• Late</span>}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h4 className={`font-bold text-base ${isEntry ? 'text-green-800' : 'text-orange-800'}`}>
+                                        {isEntry ? 'Checked In' : 'Checked Out'}
+                                    </h4>
+                                    <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5 mt-0.5">
+                                        <Calendar size={12} />
+                                        {fullDate}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">
+                                        {log.time}
+                                    </span>
+                                    {log.isLate && <span className="text-[10px] text-red-500 font-bold mt-1 block tracking-wide uppercase">Late</span>}
+                                </div>
                             </div>
                         </div>
                     </div>

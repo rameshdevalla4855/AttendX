@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft } from 'lucide-react';
 
-export default function FacultyScheduleTab({ schedule }) {
+export default function FacultyScheduleTab({ schedule, onBack, onClassClick }) {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     // Auto-select today
@@ -22,9 +22,16 @@ export default function FacultyScheduleTab({ schedule }) {
 
             {/* TOP BAR: Header & Day Selector */}
             <div className="flex flex-col gap-6">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Teaching Schedule</h2>
-                    <p className="text-gray-500 font-medium">Manage your sessions for {selectedDay}</p>
+                <div className="flex items-center gap-3">
+                    {onBack && (
+                        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors md:hidden">
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Teaching Schedule</h2>
+                        <p className="text-gray-500 font-medium">Manage your sessions for {selectedDay}</p>
+                    </div>
                 </div>
 
                 {/* Day Chips */}
@@ -60,7 +67,11 @@ export default function FacultyScheduleTab({ schedule }) {
                         const [startTime, endTime] = slot.time.split(' - ');
 
                         return (
-                            <div key={idx} className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col sm:flex-row gap-4 sm:items-center">
+                            <div
+                                key={idx}
+                                onClick={() => onClassClick && onClassClick(slot)}
+                                className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col sm:flex-row gap-4 sm:items-center cursor-pointer active:scale-[0.99]"
+                            >
                                 {/* Time Block */}
                                 <div className="min-w-[110px] sm:border-r border-gray-100 sm:pr-4 flex sm:flex-col items-center sm:items-start gap-2 sm:gap-0">
                                     <span className="text-xl font-bold text-gray-900 tracking-tight">{startTime}</span>
@@ -83,6 +94,9 @@ export default function FacultyScheduleTab({ schedule }) {
                                 <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0 mt-3 sm:mt-0">
                                     <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
                                         {slot.context}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide group-hover:text-purple-500 transition-colors">
+                                        Tap to Mark
                                     </span>
                                 </div>
                             </div>

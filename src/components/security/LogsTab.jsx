@@ -14,23 +14,27 @@ export default function LogsTab() {
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const q = query(
+        const logsQuery = query(
             collection(db, "attendanceLogs"),
             where("timestamp", ">=", startOfDay),
             orderBy("timestamp", "desc"),
             limit(50)
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
             const logsData = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                isVisitor: doc.data().role === 'visitor'
             }));
+
             setLogs(logsData);
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeLogs();
+        };
     }, []);
 
     const filteredLogs = logs.filter(log => {
@@ -96,9 +100,9 @@ export default function LogsTab() {
                     filteredLogs.map(log => (
                         <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between transition-colors hover:border-indigo-100">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${log.role === 'faculty' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${log.role === 'faculty' ? 'bg-purple-100 text-purple-700' : log.role === 'visitor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
                                     }`}>
-                                    {log.role === 'faculty' ? 'F' : 'S'}
+                                    {log.role === 'faculty' ? 'F' : log.role === 'visitor' ? 'V' : 'S'}
                                 </div>
                                 <div>
                                     <h4 className="font-semibold text-gray-900">{log.name || 'Unknown'}</h4>

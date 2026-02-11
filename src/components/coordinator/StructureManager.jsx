@@ -28,8 +28,8 @@ export default function StructureManager({ readOnly = false, profile }) {
                 if (!data.departmentMap) data.departmentMap = {};
                 setStructure(data);
 
-                // If coordinator, default filter to their first mapped branch or their dept
-                if (coordinatorDept && !readOnly) {
+                // If coordinator or HOD, default filter to their first mapped branch or their dept
+                if (coordinatorDept) {
                     setFilterBranch(coordinatorDept);
                 }
             }
@@ -137,9 +137,9 @@ export default function StructureManager({ readOnly = false, profile }) {
     if (!structure) return <div className="p-8 text-center text-red-500">Error loading structure.</div>;
 
     // Filter Logic for Display
-    // If Coordinator, show only branches in their map (OR their own dept name if map empty? fallback)
+    // If Coordinator or HOD, show only branches in their map
     let visibleBranches = structure.branches;
-    if (coordinatorDept && !readOnly) {
+    if (coordinatorDept) {
         visibleBranches = structure.departmentMap?.[coordinatorDept] || [];
         // If map is empty, maybe show nothing or just the dept itself if it matches a branch?
         if (visibleBranches.length === 0 && structure.branches.includes(coordinatorDept)) {

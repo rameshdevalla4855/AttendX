@@ -1,8 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { X, User, Phone, BookOpen, Clock, Calendar, CheckCircle, AlertCircle, ScanLine, Activity } from 'lucide-react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'sonner';
 
 export default function StudentDetailModal({ student, onClose, onScanAnother }) {
     const [activeTab, setActiveTab] = useState('overview');
@@ -36,6 +38,104 @@ export default function StudentDetailModal({ student, onClose, onScanAnother }) 
             console.error("Failed to load history", err);
         } finally {
             setLoadingHistory(false);
+        }
+    };
+
+    const { currentUser } = useAuth();
+    const [reporting, setReporting] = useState(false);
+
+    const handleReportBunking = async () => {
+        if (!window.confirm(`REPORT BUNKING?\n\nAre you sure you want to report ${student.name} for bunking?\nThis will alert the HOD, Coordinator, and Mentor.`)) return;
+
+        setReporting(true);
+        try {
+            // 1. Log Security Alert
+            await addDoc(collection(db, "securityAlerts"), {
+                uid: student.id,
+                name: student.name,
+                rollNumber: student.rollNumber || student.id,
+                dept: student.dept || student.branch,
+                type: 'BUNKING',
+                reason: 'Reported by Faculty/Staff',
+                reporterId: currentUser?.uid || 'unknown',
+                timestamp: serverTimestamp(),
+                date: new Date().toLocaleDateString('en-CA'),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+            });
+
+            // 2. Find Recipients (HOD, Coordinator of Student's Dept)
+            const dept = student.dept || student.branch;
+            if (!dept) {
+                toast.error("Student has no Department assigned. Cannot route alert.");
+                setReporting(false);
+                return;
+            }
+
+            const recipients = [];
+
+            // Helper to get docs from multiple potential fields
+            const getRecipientsByRole = async (collectionName, roleName, fieldsToCheck) => {
+                const results = [];
+                // Run queries in parallel for each potential field name
+                await Promise.all(fieldsToCheck.map(async (field) => {
+                    const q = query(collection(db, collectionName), where(field, "==", dept));
+                    const snap = await getDocs(q);
+                    snap.forEach(d => {
+                        // Avoid duplicates if same user found via multiple queries
+                        if (!results.find(r => r.uid === d.id)) {
+                            results.push({ uid: d.id, role: roleName });
+                        }
+                    });
+                }));
+                return results;
+            };
+
+            // HOD: Check 'dept', 'Department', 'branch'
+            const hods = await getRecipientsByRole("hods", "hod", ["dept", "Department", "branch"]);
+            recipients.push(...hods);
+
+            // Coordinator: Check 'branch', 'dept', 'Department'
+            const coords = await getRecipientsByRole("coordinators", "coordinator", ["branch", "dept", "Department"]);
+            recipients.push(...coords);
+
+            // Mentor
+            if (student.mentorId) {
+                recipients.push({ uid: student.mentorId, role: 'faculty' });
+            }
+
+            if (recipients.length === 0) {
+                toast.warning(`Alert logged, but no HOD/Coordinator found for ${dept}.`);
+            } else {
+                console.log(`Sending alerts to ${recipients.length} recipients:`, recipients);
+            }
+
+            // 3. Send Notifications (Ephemeral)
+            const batchPromises = recipients.map(r => {
+                return addDoc(collection(db, "notifications"), {
+                    title: `🚨 BUNKING ALERT: ${student.name}`,
+                    message: `Student ${student.name} (${student.rollNumber || student.id}) was reported for bunking class.`,
+                    senderUid: currentUser?.uid || 'system',
+                    senderName: 'Security/Faculty',
+                    senderRole: 'system',
+                    targetUid: r.uid, // Direct Target
+                    targetRole: r.role,
+                    targetDept: dept,
+                    timestamp: serverTimestamp(),
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                    readBy: []
+                });
+            });
+
+            await Promise.all(batchPromises);
+
+            toast.error("Bunking Incident Reported. Authorities Notified.");
+            onClose();
+
+        } catch (err) {
+            console.error("Error reporting bunking:", err);
+            toast.error("Failed to report incident.");
+        } finally {
+            setReporting(false);
         }
     };
 
@@ -162,6 +262,13 @@ export default function StudentDetailModal({ student, onClose, onScanAnother }) 
                         className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-colors"
                     >
                         Close
+                    </button>
+                    <button
+                        onClick={handleReportBunking}
+                        disabled={reporting}
+                        className="flex-1 py-3 bg-red-100 text-red-700 font-bold rounded-xl hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <AlertCircle size={18} /> {reporting ? 'Reporting...' : 'Report Bunking'}
                     </button>
                     <button
                         onClick={onScanAnother}

@@ -54,10 +54,10 @@ export default function HodDashboard() {
 
         try {
             let studentData = null;
-            let studentId = id;
+            let studentId = id.trim().toUpperCase();
 
             // 1. Try Direct System ID (Roll No)
-            const docRef = doc(db, "students", id);
+            const docRef = doc(db, "students", studentId);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
@@ -67,7 +67,7 @@ export default function HodDashboard() {
                 const studentsRef = collection(db, "students");
                 // Check boolean/numeric matches too just in case? No, Firestore is strict types.
                 // Assuming barcodeId is stored as string.
-                const qBarcode = query(studentsRef, where("barcodeId", "==", id));
+                const qBarcode = query(studentsRef, where("barcodeId", "==", id)); // Keep barcode raw in case it's case sensitive? usually numeric/code.
                 const barcodeSnap = await getDocs(qBarcode);
 
                 if (!barcodeSnap.empty) {
@@ -76,7 +76,7 @@ export default function HodDashboard() {
                     studentId = d.id;
                 } else {
                     // 3. Try fallback RollNumber query (if doc ID is different from rollNo field)
-                    const qRoll = query(studentsRef, where("rollNumber", "==", id));
+                    const qRoll = query(studentsRef, where("rollNumber", "==", studentId));
                     const rollSnap = await getDocs(qRoll);
                     if (!rollSnap.empty) {
                         const d = rollSnap.docs[0];
@@ -119,7 +119,7 @@ export default function HodDashboard() {
     const renderContent = () => {
         switch (activeTab) {
             case 'home': return <HomeTab profile={profile} />;
-            case 'structure': return <StructureManager readOnly={true} />;
+            case 'structure': return <StructureManager readOnly={true} profile={profile} />;
             case 'status': return <AttendanceStatusTab profile={profile} />;
             case 'import': return <ImportDataTab />;
             case 'notify': return <NotificationManagerTab profile={profile} />;
@@ -250,7 +250,7 @@ export default function HodDashboard() {
                                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
                                         placeholder="e.g. 23WJ1A0..."
                                         value={manualId}
-                                        onChange={(e) => setManualId(e.target.value)}
+                                        onChange={(e) => setManualId(e.target.value.toUpperCase())}
                                     />
                                     <button
                                         type="submit"

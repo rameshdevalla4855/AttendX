@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import VisitorLogin from './pages/VisitorLogin';
 import ActivateAccount from './pages/ActivateAccount';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
-import SecurityDashboard from './pages/SecurityDashboard';
 import HodDashboard from './pages/HodDashboard';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
+import SecurityDashboard from './pages/SecurityDashboard';
+import VisitorDashboard from './pages/VisitorDashboard';
 import ImportData from './pages/ImportData';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -24,6 +26,7 @@ const RootRedirect = () => {
   if (userRole === 'security') return <Navigate to="/security" replace />;
   if (userRole === 'hod') return <Navigate to="/hod" replace />;
   if (userRole === 'coordinator') return <Navigate to="/coordinator" replace />;
+  if (userRole === 'visitor') return <Navigate to="/visitor-dashboard" replace />;
 
   return (
     <div className="flex flex-col h-screen items-center justify-center space-y-4">
@@ -71,6 +74,10 @@ function App() {
 
             {/* Coordinator Routes */}
             <Route path="/coordinator" element={<PrivateRoute role="coordinator"><CoordinatorDashboard /></PrivateRoute>} />
+
+            {/* Visitor Routes */}
+            <Route path="/visitor-login" element={<VisitorLogin />} />
+            <Route path="/visitor-dashboard" element={<PrivateRoute role="visitor"><VisitorDashboard /></PrivateRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -1,0 +1,14 @@
+
+------------------------------------------------
+✅ Test Data Seeded Successfully!
+------------------------------------------------
+➡️  Visitor Name: Test Visitor (Manual)
+➡️  QR Code: VISIT-TEST-123
+➡️  Linked Student: prathul
+➡️  Student Email: 23wj1a0502@gniindia.org (Login here to Approve)
+------------------------------------------------
+👉 TEST STEPS:
+1. Login as Security -> Go to Scanner -> Enter 'VISIT-TEST-123' manually.
+2. Login as Student (23wj1a0502@gniindia.org) -> Approve Request.
+3. Login as Security -> Enter 'VISIT-TEST-123' again to Exit.
+------------------------------------------------

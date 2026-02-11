@@ -85,6 +85,9 @@ export default function Login() {
                 <div className="mt-6 text-center text-sm text-gray-600">
                     First time user? <Link to="/activate" className="text-blue-600 hover:underline font-medium">Activate Account</Link>
                 </div>
+                <div className="mt-2 text-center text-sm text-gray-600">
+                    Visiting Campus? <Link to="/visitor-login" className="text-indigo-600 hover:underline font-medium">Visitor Login</Link>
+                </div>
             </div>
         </div>
     );
