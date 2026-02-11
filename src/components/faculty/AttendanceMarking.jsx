@@ -224,7 +224,7 @@ export default function AttendanceMarking({ session, onBack }) {
             </div>
 
             {/* Floating Action Button */}
-            <div className="fixed bottom-6 right-6 left-6 md:left-auto md:right-8 md:w-auto z-30">
+            <div className="fixed bottom-24 md:bottom-6 right-6 left-6 md:left-auto md:right-8 w-auto z-50">
                 <button
                     onClick={handleSubmit}
                     disabled={submitting}

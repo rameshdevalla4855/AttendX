@@ -45,3 +45,10 @@ debug_*.txt
 .DS_Store
 Thumbs.db
 firebase.js
+
+
+students.json
+faculty.json
+coordinators.json
+hods.json
+security.json

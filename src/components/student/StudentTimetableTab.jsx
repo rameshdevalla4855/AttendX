@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Coffee, BookOpen, ChevronRight, User, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, MapPin, Coffee, BookOpen, ChevronRight, User, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { academicService } from '../../services/academicService';
 
 export default function StudentTimetableTab({ timetable, profile, onBack }) {
@@ -8,6 +8,10 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
     // State
     const [selectedDay, setSelectedDay] = useState(days[new Date().getDay() - 1] || 'Monday');
     const [slots, setSlots] = useState([]);
+
+    // Daily Attendance Status State
+    const [attendanceStatus, setAttendanceStatus] = useState({}); // { slotIndex: 'P' | 'A' | null }
+    const [loadingStatus, setLoadingStatus] = useState(false);
 
     // Attendance Modal State
     const [selectedSlot, setSelectedSlot] = useState(null);
@@ -23,7 +27,85 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
         }
     }, [selectedDay, timetable]);
 
-    // Fetch Attendance when a slot is clicked
+    // Fetch Attendance Status for the Selected Day
+    useEffect(() => {
+        const fetchDailyAttendance = async () => {
+            if (!profile || !slots.length) return;
+
+            setLoadingStatus(true);
+            const statusMap = {};
+            const branch = profile.dept || profile.branch;
+            const year = profile.year;
+            const section = profile.section || 'A';
+            const studentId = profile.rollNumber || profile.id;
+
+            // Calculate Date for the selected day (Current Week)
+            const today = new Date();
+            const currentDayIndex = today.getDay(); // 0=Sun, 1=Mon...
+            const targetDayIndex = days.indexOf(selectedDay) + 1; // 1=Mon...
+
+            // Adjust date to match the target day of the *current week* (starting Monday)
+            // Note: This logic assumes "Current Week" starts on Sunday or Monday. 
+            // Simple approach: Get Monday of current week, then add offset.
+            const diffToMonday = (currentDayIndex === 0 ? -6 : 1) - currentDayIndex;
+            const mondayDate = new Date(today);
+            mondayDate.setDate(today.getDate() + diffToMonday);
+
+            const targetDate = new Date(mondayDate);
+            targetDate.setDate(mondayDate.getDate() + (days.indexOf(selectedDay)));
+
+            const dateStr = targetDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
+
+            try {
+                await Promise.all(slots.map(async (slot, index) => {
+                    if (slot.subjectCode === 'BREAK') return;
+
+                    // Construct Period ID: BRANCH_YEAR_SEC_DATE_STARTTIME
+                    // StartTime needs to be stripped of colon, e.g. "0930"
+                    const startTimeRaw = slot.time.split(' - ')[0]; // "09:30 AM"
+
+                    // The AttendanceMarking component stores it as:
+                    // const startTime = session.time.split(' - ')[0].replace(':', '');
+                    // But wait, the `time` format in timetable might be "09:30 AM" or "9:30 AM".
+                    // And the `AttendanceMarking` used `session.time.split(' - ')[0].replace(':', '')`.
+                    // We need to match that exactly.
+
+                    // Let's look at `AttendanceMarking.jsx` again mentally... 
+                    // It used: `const startTime = session.time.split(' - ')[0].replace(':', '');`
+                    // So if time is "09:30 AM", it becomes "0930 AM".
+                    // Wait, `AttendanceMarking` logic: `const periodId = ..._${startTime}`
+                    // If the stored ID includes the space and AM/PM, we need to include it.
+                    // Let's assume standard format matches.
+
+                    const startTimeClean = startTimeRaw.replace(':', '');
+                    // Note: If AttendanceMarking includes the space and AM/PM in the ID, we must too.
+                    // Looking at AttendanceMarking.jsx lines 53: `const periodId = ..._${startTime}`;
+                    // It replaces ':' with empty string. So "09:30 AM" -> "0930 AM".
+
+                    const periodId = `${branch}_${year}_${section}_${dateStr}_${startTimeClean}`;
+
+                    try {
+                        const record = await academicService.getAttendancePeriod(periodId);
+                        if (record && record.records) {
+                            // Use slot.time as key to avoid sort order mismatch
+                            statusMap[slot.time] = record.records[studentId] || 'NA';
+                        }
+                    } catch (err) {
+                        console.log(`No record for ${periodId}`);
+                    }
+                }));
+                setAttendanceStatus(statusMap);
+            } catch (e) {
+                console.error("Error fetching daily attendance:", e);
+            } finally {
+                setLoadingStatus(false);
+            }
+        };
+
+        fetchDailyAttendance();
+    }, [slots, selectedDay, profile, days]); // Re-run when day or slots change
+
+    // Fetch Attendance History when a slot is clicked
     const handleSlotClick = async (slot) => {
         if (!profile || slot.subjectCode === 'BREAK') return;
 
@@ -179,6 +261,7 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                         const isBreak = slot.subjectCode === 'BREAK';
                         const [startTime, endTime] = slot.time.split(' - ');
                         const status = getClassStatus(slot.time);
+                        const userStatus = attendanceStatus[slot.time]; // Use time as key
 
                         return (
                             <div
@@ -216,8 +299,20 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                                     )}
                                 </div>
 
-                                {/* End Time / Status */}
-                                <div className="text-right pl-2">
+                                {/* Attendance Indicator (Right Edge) */}
+                                <div className="text-right pl-2 flex items-center gap-3">
+                                    {/* Show Tick/Cross if attendance exists */}
+                                    {userStatus === 'P' && (
+                                        <div className="p-1.5 bg-green-100 rounded-full text-green-600 border border-green-200 shadow-sm" title="Present">
+                                            <CheckCircle size={18} />
+                                        </div>
+                                    )}
+                                    {userStatus === 'A' && (
+                                        <div className="p-1.5 bg-red-100 rounded-full text-red-600 border border-red-200 shadow-sm" title="Absent">
+                                            <XCircle size={18} />
+                                        </div>
+                                    )}
+
                                     {status === 'ongoing' ? (
                                         <span className="inline-flex items-center px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider animate-pulse">
                                             Now
