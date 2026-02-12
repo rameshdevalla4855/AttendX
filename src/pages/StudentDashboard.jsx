@@ -176,10 +176,7 @@ export default function StudentDashboard() {
                     </div>
                 </nav>
                 <div className="pb-8">
-                    <button onClick={logout} className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium">
-                        <LogOut size={20} />
-                        <span>Sign Out</span>
-                    </button>
+                   {/* Sign Out removed as per user request */}
                 </div>
             </aside>
 

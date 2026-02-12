@@ -48,7 +48,8 @@ export default function AttendanceMarking({ session, onBack }) {
 
                 // 2. Check for Existing Attendance
                 // Doc ID: BRANCH_YEAR_SEC_DATE_STARTTIME
-                const dateStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                // Allow session to override date (for editing past records)
+                const dateStr = session.date || new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
                 const startTime = session.time.split(' - ')[0].replace(':', '');
                 const periodId = `${ctx.branch}_${ctx.year}_${ctx.section}_${dateStr}_${startTime}`;
 
@@ -96,7 +97,7 @@ export default function AttendanceMarking({ session, onBack }) {
     const handleSubmit = async () => {
         setSubmitting(true);
         const ctx = parseContext(session.context);
-        const dateStr = new Date().toLocaleDateString('en-CA');
+        const dateStr = session.date || new Date().toLocaleDateString('en-CA');
         const startTime = session.time.split(' - ')[0].replace(':', '');
         const periodId = `${ctx.branch}_${ctx.year}_${ctx.section}_${dateStr}_${startTime}`;
 

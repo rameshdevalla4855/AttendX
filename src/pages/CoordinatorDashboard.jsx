@@ -15,6 +15,7 @@ import FacultyMapper from '../components/coordinator/FacultyMapper';
 import TimetableManager from '../components/coordinator/TimetableManager';
 import NotificationManagerTab from '../components/hod/NotificationManagerTab';
 import AttendanceStatusTab from '../components/hod/AttendanceStatusTab';
+import ClassMonitorTab from '../components/coordinator/ClassMonitorTab';
 
 export default function CoordinatorDashboard() {
     const { currentUser, logout } = useAuth();
@@ -166,6 +167,7 @@ export default function CoordinatorDashboard() {
                         {activeTab === 'structure' && <StructureManager profile={profile} />}
                         {activeTab === 'faculty' && <FacultyMapper profile={profile} />}
                         {activeTab === 'timetable' && <TimetableManager profile={profile} />}
+                        {activeTab === 'monitor' && <ClassMonitorTab profile={profile} />}
                         {activeTab === 'status' && <AttendanceStatusTab profile={profile} />}
                         {activeTab === 'notify' && <NotificationManagerTab profile={profile} role="coordinator" />}
                     </div>
@@ -188,6 +190,7 @@ export default function CoordinatorDashboard() {
                 </div>
 
                 <NavTab id="timetable" label="Time" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="monitor" label="Classes" icon={PieChart} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="notify" label="Notify" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
             </nav>
 
