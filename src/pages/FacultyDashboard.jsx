@@ -195,6 +195,7 @@ export default function FacultyDashboard() {
             );
             case 'history': return (
                 <FacultyHistoryTab
+                    assignments={assignments}
                     onBack={() => setActiveTab('home')}
                     onEditClass={(session) => setSelectedSession(session)}
                 />
@@ -345,39 +346,58 @@ export default function FacultyDashboard() {
     );
 }
 
+// ... (previous imports same)
+
+// ...
+
+// Sidebar Item Component
 function SidebarItem({ id, label, icon: Icon, activeTab, setActiveTab }) {
     const isActive = activeTab === id;
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 group ${isActive ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'text-gray-600 hover:bg-gray-50'
+            className={`flex items-center gap-3.5 w-full px-5 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden ${isActive
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-200 ring-1 ring-purple-500/20'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                 }`}
         >
-            <Icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-purple-600'} />
-            <span className="font-semibold">{label}</span>
+            {/* Active Glow */}
+            {isActive && <div className="absolute inset-0 bg-white/20 blur-md scale-150 animate-pulse hidden"></div>}
+
+            <Icon size={20} className={`relative z-10 transition-transform duration-300 ${isActive ? 'scale-110 drop-shadow-sm' : 'group-hover:scale-110'}`} />
+            <span className={`font-bold relative z-10 text-sm tracking-wide ${isActive ? '' : 'font-medium'}`}>{label}</span>
+
+            {/* Hover Arrow */}
+            {!isActive && (
+                <div className="absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-slate-300">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            )}
         </button>
     );
 }
 
+// Mobile Nav Tab Component
 function NavTab({ id, label, icon: Icon, activeTab, setActiveTab }) {
     const isActive = activeTab === id;
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`relative flex flex-col items-center gap-1 transition-all duration-300 w-16 ${isActive ? 'text-purple-600' : 'text-gray-400 hover:text-gray-600'
-                }`}
+            className={`relative flex flex-col items-center gap-1 transition-all duration-300 min-w-[4rem] group`}
         >
-            <div className={`p-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-purple-50 -translate-y-2 shadow-sm' : ''
+            <div className={`p-2.5 rounded-2xl transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${isActive
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 -translate-y-4 scale-110 rotate-3'
+                : 'text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600'
                 }`}>
-                <Icon size={isActive ? 24 : 22} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={`text-[10px] font-bold transition-all duration-300 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 absolute'
+
+            <span className={`text-[10px] font-bold transition-all duration-300 absolute -bottom-2 ${isActive ? 'opacity-100 translate-y-0 text-purple-700 scale-100' : 'opacity-0 translate-y-2 scale-90'
                 }`}>
                 {label}
             </span>
-            {isActive && (
-                <span className="absolute -bottom-2 w-1 h-1 bg-purple-600 rounded-full"></span>
-            )}
         </button>
     );
 }

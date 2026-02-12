@@ -221,6 +221,8 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
         });
     };
 
+    // ... imports and logic remain same
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             {/* Header */}
@@ -232,8 +234,8 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                         </button>
                     )}
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Weekly Schedule</h2>
-                        <p className="text-gray-600 font-medium">{selectedDay}'s Classes</p>
+                        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Weekly Schedule</h2>
+                        <p className="text-slate-500 font-medium">{selectedDay}'s Classes</p>
                     </div>
                 </div>
 
@@ -243,9 +245,9 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                         <button
                             key={day}
                             onClick={() => setSelectedDay(day)}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors whitespace-nowrap ${selectedDay === day
-                                ? 'bg-indigo-700 text-white border-indigo-700 shadow-md'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all whitespace-nowrap ${selectedDay === day
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-indigo-200'
                                 }`}
                         >
                             {day.slice(0, 3)}
@@ -255,7 +257,7 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
             </div>
 
             {/* List View */}
-            <div className="space-y-3">
+            <div className="space-y-4">
                 {slots.length > 0 ? (
                     sortSlots(slots).map((slot, idx) => {
                         const isBreak = slot.subjectCode === 'BREAK';
@@ -267,9 +269,12 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                             <div
                                 key={idx}
                                 onClick={() => !isBreak && handleSlotClick(slot)}
-                                className={`relative flex items-center p-3 rounded-xl border transition-all ${status === 'ongoing' ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500 z-10' : 'bg-white border-gray-200 hover:border-gray-300'
-                                    } ${isBreak ? 'bg-orange-50/50 border-orange-200 cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
+                                className={`relative flex items-center p-4 rounded-2xl border transition-all duration-300 ${status === 'ongoing'
+                                        ? 'bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-200 z-10 scale-[1.01]'
+                                        : 'bg-white border-slate-100 shadow-sm hover:border-indigo-100 hover:shadow-md hover:shadow-indigo-50/50'
+                                    } ${isBreak ? 'bg-orange-50/50 border-orange-100 cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
                             >
+
 
                                 {/* Status Strip */}
                                 <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-full ${status === 'ongoing' ? 'bg-indigo-500' : status === 'completed' ? 'bg-gray-300' : 'bg-transparent'

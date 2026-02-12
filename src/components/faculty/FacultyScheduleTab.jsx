@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, MapPin, Users, ChevronRight, CheckCircle } from 'lucide-react';
 
 export default function FacultyScheduleTab({ schedule, onBack, onClassClick }) {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -15,10 +15,20 @@ export default function FacultyScheduleTab({ schedule, onBack, onClassClick }) {
     };
 
     const sortSlots = (slots) => [...slots].sort((a, b) => (timeOrder[a.time] || 99) - (timeOrder[b.time] || 99));
-    const slots = schedule[selectedDay] || [];
+    const rawSlots = schedule[selectedDay] || [];
+
+    // Grouping Logic: { "CSE Yr 3 (A)": [slot1, slot2], ... }
+    const groupedSlots = rawSlots.reduce((acc, slot) => {
+        const context = slot.context || 'Other';
+        if (!acc[context]) acc[context] = [];
+        acc[context].push(slot);
+        return acc;
+    }, {});
+
+    const sortedGroups = Object.keys(groupedSlots).sort();
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
 
             {/* TOP BAR: Header & Day Selector */}
             <div className="flex flex-col gap-6">
@@ -51,64 +61,88 @@ export default function FacultyScheduleTab({ schedule, onBack, onClassClick }) {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                        <Clock size={18} className="text-purple-600" />
-                        Session Timeline
-                    </h3>
-                    <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-bold border border-purple-100">
-                        {slots.length} Classes
-                    </span>
-                </div>
-
-                {slots.length > 0 ? (
-                    sortSlots(slots).map((slot, idx) => {
-                        const [startTime, endTime] = slot.time.split(' - ');
+            {/* Grouped Schedule */}
+            <div className="space-y-8">
+                {sortedGroups.length > 0 ? (
+                    sortedGroups.map((groupName, groupIdx) => {
+                        const groupSlots = sortSlots(groupedSlots[groupName]);
 
                         return (
-                            <div
-                                key={idx}
-                                onClick={() => onClassClick && onClassClick(slot)}
-                                className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col sm:flex-row gap-4 sm:items-center cursor-pointer active:scale-[0.99]"
-                            >
-                                {/* Time Block */}
-                                <div className="min-w-[110px] sm:border-r border-gray-100 sm:pr-4 flex sm:flex-col items-center sm:items-start gap-2 sm:gap-0">
-                                    <span className="text-xl font-bold text-gray-900 tracking-tight">{startTime}</span>
-                                    <span className="text-sm font-medium text-gray-500">{endTime}</span>
-                                </div>
-
-                                {/* Subject Info */}
-                                <div className="flex-1">
-                                    <h4 className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">
-                                        {slot.subjectName}
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded font-mono border border-gray-200">
-                                            {slot.subjectCode}
-                                        </span>
+                            <div key={groupIdx} className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: `${groupIdx * 100}ms` }}>
+                                {/* Group Header */}
+                                <div className="flex items-center gap-3 mb-4 sticky top-[70px] z-10 bg-slate-50/95 backdrop-blur-sm py-2">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm">
+                                        <Users size={20} />
                                     </div>
+                                    <h3 className="text-lg font-bold text-gray-800">{groupName}</h3>
+                                    <span className="px-2.5 py-0.5 bg-gray-200 text-gray-600 text-xs font-bold rounded-full">
+                                        {groupSlots.length}
+                                    </span>
                                 </div>
 
-                                {/* Class Context Badge */}
-                                <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-gray-100 pt-3 sm:pt-0 mt-3 sm:mt-0">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
-                                        {slot.context}
-                                    </span>
-                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide group-hover:text-purple-500 transition-colors">
-                                        Tap to Mark
-                                    </span>
+                                {/* Sessions List */}
+                                <div className="space-y-3 pl-4 border-l-2 border-dashed border-gray-200 ml-5 relative">
+                                    {groupSlots.map((slot, idx) => {
+                                        const [startTime, endTime] = slot.time.split(' - ');
+
+                                        // Simple logic to determine if class is active/past
+                                        // Note: Accurate "Active" check requires parsing time strings vs current time.
+                                        // For now, we allow clicking all.
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                onClick={() => onClassClick && onClassClick(slot)}
+                                                className="relative group bg-white rounded-2xl border border-gray-200 p-5 hover:border-purple-200 hover:shadow-[0_4px_20px_rgb(0,0,0,0.05)] transition-all cursor-pointer overflow-hidden"
+                                            >
+                                                {/* Hover Accent */}
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                                                <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+
+                                                    {/* Time & Subject */}
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="min-w-[70px] text-center bg-gray-50 rounded-lg p-2 group-hover:bg-purple-50 transition-colors">
+                                                            <p className="text-sm font-bold text-gray-900 leading-none mb-1">{startTime}</p>
+                                                            <p className="text-[10px] text-gray-500 font-medium uppercase">{endTime}</p>
+                                                        </div>
+
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-purple-700 transition-colors">
+                                                                {slot.subjectName}
+                                                            </h4>
+                                                            <div className="flex items-center gap-3 mt-1.5">
+                                                                <span className="text-xs font-mono font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                                                    {slot.subjectCode}
+                                                                </span>
+                                                                <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+                                                                    <MapPin size={12} /> Room {slot.room || 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Action */}
+                                                    <div className="flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                                                        <span className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-all flex items-center gap-2">
+                                                            Mark Attendance <ChevronRight size={14} />
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
                     })
                 ) : (
-                    <div className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                            <Calendar size={32} />
+                    <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <Calendar size={32} className="text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900">No Teaching Sessions</h3>
-                        <p className="text-gray-500 text-sm mt-1">You have no classes scheduled for {selectedDay}.</p>
+                        <h3 className="text-xl font-bold text-gray-900">No classes today</h3>
+                        <p className="text-gray-500">Enjoy your free time!</p>
                     </div>
                 )}
             </div>

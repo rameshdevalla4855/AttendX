@@ -269,28 +269,45 @@ export const academicService = {
             const snapshot = await getDocs(q);
             let total = 0;
             let present = 0;
+            const subjectStats = {}; // { subjectCode: { total: 0, present: 0, name: '' } }
 
             snapshot.forEach(doc => {
                 const data = doc.data();
                 const records = data.records || {};
+                const subjectCode = data.subjectCode;
+                const subjectName = data.subjectName || subjectCode;
 
-                // Check both keys (Roll Number takes precedence if both exist, which shouldn't happen)
+                // Check both keys (Roll Number takes precedence if both exist)
                 const status = records[studentRoll] || records[studentId];
+
+                // Initialize subject stats if new
+                if (!subjectStats[subjectCode]) {
+                    subjectStats[subjectCode] = { code: subjectCode, name: subjectName, total: 0, present: 0 };
+                }
 
                 if (status === 'P') {
                     present++;
                     total++;
+                    subjectStats[subjectCode].present++;
+                    subjectStats[subjectCode].total++;
                 } else if (status === 'A') {
                     total++;
+                    subjectStats[subjectCode].total++;
                 }
             });
 
+            // Convert map to array and calculate percentages
+            const subjectWise = Object.values(subjectStats).map(sub => ({
+                ...sub,
+                percentage: sub.total > 0 ? Math.round((sub.present / sub.total) * 100) : 0
+            }));
+
             const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-            return { total, present, percentage };
+            return { total, present, percentage, subjectWise };
 
         } catch (e) {
             console.error("Error fetching overall attendance:", e);
-            return { total: 0, present: 0, percentage: 0 };
+            return { total: 0, present: 0, percentage: 0, subjectWise: [] };
         }
     },
 

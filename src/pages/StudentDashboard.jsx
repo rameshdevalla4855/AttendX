@@ -15,7 +15,10 @@ import StudentHistoryTab from '../components/student/StudentHistoryTab';
 import LearnifyTab from '../components/student/LearnifyTab'; // Restored
 import NotificationDropdown from '../components/common/NotificationDropdown';
 
+// ... imports remain the same
+
 export default function StudentDashboard() {
+    // ... existing state and logic ...
     const { currentUser, logout } = useAuth();
     const [profile, setProfile] = useState(null);
     const [assignments, setAssignments] = useState([]);
@@ -26,11 +29,13 @@ export default function StudentDashboard() {
     const [prevStatus, setPrevStatus] = useState(null);
     const [activeTab, setActiveTab] = useState('home');
 
+    // ... renderContent and useEffects remain same ...
+
     const renderContent = () => {
         switch (activeTab) {
             case 'home': return <StudentHomeTab profile={profile} status={status} timetable={timetable} attendanceStats={attendanceStats} />;
             case 'timetable': return <StudentTimetableTab timetable={timetable} profile={profile} onBack={() => setActiveTab('home')} />;
-            case 'history': return <StudentHistoryTab onBack={() => setActiveTab('home')} />;
+            case 'history': return <StudentHistoryTab profile={profile} onBack={() => setActiveTab('home')} />;
             case 'learnify': return <LearnifyTab />; // Restored
             default: return <StudentHomeTab profile={profile} status={status} timetable={timetable} attendanceStats={attendanceStats} />;
         }
@@ -113,8 +118,9 @@ export default function StudentDashboard() {
         }
     }, [currentUser, prevStatus]);
 
+
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-gray-900">
+        <div className="flex flex-col min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700">
             <Helmet>
                 <title>Student Dashboard | SFM System</title>
             </Helmet>
@@ -122,68 +128,94 @@ export default function StudentDashboard() {
 
             <UserProfile isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} profile={profile} onLogout={logout} />
 
-            {/* Header - Sticky */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-6 py-4 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200 shrink-0">
-                        <ShieldCheck size={24} className="text-white" />
+            {/* Header - Sticky Glass */}
+            <header className="fixed top-0 left-0 right-0 h-[72px] bg-white/80 backdrop-blur-xl border-b border-indigo-50/50 z-30 px-6 flex justify-between items-center transition-all duration-300">
+                <div className="flex items-center gap-4">
+                    <div className="p-2.5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl shadow-lg shadow-indigo-200/50 shrink-0 transform hover:scale-105 transition-transform duration-300">
+                        <ShieldCheck size={22} className="text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight text-gray-900 leading-tight hidden xs:block">SFM Student</h1>
-                        <h1 className="text-xl font-bold tracking-tight text-gray-900 leading-tight xs:hidden">SFM</h1>
-                        <p className="text-xs text-gray-500 font-medium">My Campus</p>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none hidden xs:block font-display">SFM Student</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none xs:hidden">SFM</h1>
+                        <p className="text-[11px] text-slate-500 font-semibold tracking-wide uppercase mt-1">My Campus Portal</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                     <NotificationDropdown currentUser={currentUser} role="student" dept={profile?.departmentGroup || profile?.dept} />
 
+                    <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
+
                     <button
                         onClick={() => setIsProfileOpen(true)}
-                        className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
+                        className="group relative"
                     >
-                        {profile?.name?.charAt(0) || <User size={20} />}
+                        <div className="w-10 h-10 rounded-full bg-white border-2 border-indigo-50 flex items-center justify-center text-indigo-700 font-bold shadow-sm group-hover:border-indigo-200 transition-all overflow-hidden">
+                            {/* Initials or User Icon */}
+                            {profile?.name ? (
+                                <span className="text-sm">{profile.name.charAt(0)}</span>
+                            ) : (
+                                <User size={20} />
+                            )}
+                        </div>
+                        <div className="absolute inset-0 rounded-full ring-2 ring-indigo-500 ring-offset-2 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </button>
                 </div>
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full md:ml-64 md:max-w-[calc(100%-16rem)]">
-                <div className="animate-in fade-in zoom-in duration-500">
-                    {renderContent()}
+            <main className="flex-1 pt-[72px] md:pl-72 w-full max-w-[1920px] mx-auto">
+                <div className="p-6 md:p-10 max-w-7xl mx-auto w-full pb-28 md:pb-10">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+                        {renderContent()}
+                    </div>
                 </div>
             </main>
 
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex flex-col fixed left-0 top-[73px] bottom-0 w-64 bg-white border-r border-gray-200 pt-6 px-4 z-20">
-                <nav className="space-y-2 flex-1">
-                    <SidebarItem id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <SidebarItem id="timetable" label="My Timetable" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <SidebarItem id="history" label="Attendance History" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
-
-                    <div className="pt-4 mt-4 border-t border-gray-100">
-                        <div className="px-4 mb-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Learning</span>
+            <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-indigo-50/50 pt-[72px] px-6 z-20">
+                <div className="flex flex-col h-full py-8">
+                    <nav className="space-y-2 flex-1">
+                        <div className="px-3 mb-4">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Menu</span>
                         </div>
-                        <SidebarItem
-                            id="learnify"
-                            label="Learnify AI"
-                            icon={BrainCircuit}
-                            activeTab={activeTab}
-                            setActiveTab={setActiveTab}
-                            isSpecial={true}
-                        />
+                        <SidebarItem id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <SidebarItem id="timetable" label="My Timetable" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <SidebarItem id="history" label="Attendance History" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+                        <div className="pt-8 mt-6 border-t border-slate-50">
+                            <div className="px-3 mb-4">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Academic AI</span>
+                            </div>
+                            <SidebarItem
+                                id="learnify"
+                                label="Learnify AI"
+                                icon={BrainCircuit}
+                                activeTab={activeTab}
+                                setActiveTab={setActiveTab}
+                                isSpecial={true}
+                            />
+                        </div>
+                    </nav>
+
+                    {/* User Mini Profile in Sidebar Bottom */}
+                    <div className="mt-auto p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-bold shadow-sm">
+                            {profile?.name?.charAt(0)}
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-sm font-bold text-slate-900 truncate">{profile?.name || 'Student'}</p>
+                            <p className="text-xs text-slate-500 truncate">{profile?.rollNumber}</p>
+                        </div>
                     </div>
-                </nav>
-                <div className="pb-8">
-                   {/* Sign Out removed as per user request */}
                 </div>
             </aside>
 
             {/* Mobile Bottom Nav */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 z-40 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-white/90 backdrop-blur-xl border border-white/20 px-6 py-4 z-40 flex justify-between items-center shadow-2xl shadow-slate-200/50 rounded-2xl ring-1 ring-black/5">
                 <NavTab id="home" label="Home" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="timetable" label="Time" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <div className="w-[1px] h-8 bg-slate-100 mx-2"></div>
                 <NavTab id="learnify" label="AI Tutor" icon={BrainCircuit} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="history" label="History" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
             </nav>
@@ -191,18 +223,21 @@ export default function StudentDashboard() {
     );
 }
 
-function SidebarItem({ id, label, icon: Icon, activeTab, setActiveTab }) {
+function SidebarItem({ id, label, icon: Icon, activeTab, setActiveTab, isSpecial }) {
     const isActive = activeTab === id;
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                : 'text-gray-600 hover:bg-gray-50'
+            className={`flex items-center gap-3.5 w-full px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${isActive
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'
                 }`}
         >
-            <Icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-indigo-600'} />
-            <span className="font-semibold">{label}</span>
+            {isActive && (
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-indigo-600 opacity-100"></div>
+            )}
+            <Icon size={isSpecial ? 22 : 20} className={`relative z-10 transition-transform duration-300 ${isActive ? 'text-white scale-110' : 'text-slate-400 group-hover:text-indigo-600 group-hover:scale-110'}`} strokeWidth={isActive ? 2.5 : 2} />
+            <span className={`relative z-10 font-medium tracking-wide ${isActive ? 'translate-x-1' : 'group-hover:translate-x-1'} transition-transform duration-300`}>{label}</span>
         </button>
     );
 }
@@ -212,12 +247,13 @@ function NavTab({ id, label, icon: Icon, activeTab, setActiveTab }) {
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex flex-col items-center gap-1 min-w-[4rem] transition-all duration-300 ${isActive ? 'text-indigo-600 -translate-y-1' : 'text-gray-400 hover:text-gray-600'
+            className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${isActive ? 'text-indigo-600 scale-110' : 'text-slate-400 hover:text-indigo-500'
                 }`}
         >
-            <Icon size={isActive ? 24 : 22} strokeWidth={isActive ? 2.5 : 2} />
-            <span className={`text-[10px] font-medium ${isActive ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
-            {isActive && <span className="w-1 h-1 bg-indigo-600 rounded-full absolute -bottom-2"></span>}
+            <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-50' : 'bg-transparent'}`}>
+                <Icon size={isActive ? 22 : 20} strokeWidth={isActive ? 2.5 : 2} />
+            </div>
+            {isActive && <span className="w-1 h-1 bg-indigo-600 rounded-full absolute -bottom-2 animate-bounce"></span>}
         </button>
     );
 }

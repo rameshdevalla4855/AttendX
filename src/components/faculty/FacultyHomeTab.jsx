@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Briefcase, MapPin, Clock, Calendar, CheckCircle, AlertCircle, Users, BookOpen } from 'lucide-react';
+import { Briefcase, MapPin, Clock, Calendar, CheckCircle, AlertCircle, Users, BookOpen, ChevronRight, LayoutDashboard, Coffee } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function FacultyHomeTab({ profile, status, schedule }) {
@@ -32,136 +32,166 @@ export default function FacultyHomeTab({ profile, status, schedule }) {
     });
 
     return (
-        <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-6 duration-700">
+        <div className="space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-6 duration-700">
             {/* 1. Welcome Header */}
             <div className="flex justify-between items-end px-1">
                 <div>
-                    <p className="text-gray-500 font-medium text-xs uppercase tracking-wider mb-1">{dateString}</p>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                        Welcome, <span className="text-purple-600">{profile?.name?.split(' ')[0] || 'Professor'}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-purple-100">
+                            Academic Dashboard
+                        </span>
+                    </div>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                        Welcome, <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">{profile?.name?.split(' ')[0] || 'Professor'}</span> 👋
                     </h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 flex items-center gap-2">
+                        <Calendar size={14} className="text-purple-400" /> {dateString}
+                    </p>
                 </div>
                 <div className="hidden md:block">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${status === 'IN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                    <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold ring-1 transition-all ${status === 'IN'
+                        ? 'bg-green-50 text-green-700 ring-green-100 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 ring-slate-100'
                         }`}>
-                        <span className={`w-2 h-2 rounded-full ${status === 'IN' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                        <span className={`w-2.5 h-2.5 rounded-full ${status === 'IN' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}></span>
                         {status === 'IN' ? 'On Campus' : 'Off Campus'}
                     </span>
                 </div>
             </div>
 
             {/* 2. Bento Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* A. Identity Card - 2 Cols */}
-                <div className="md:col-span-2 bg-gradient-to-br from-purple-900 via-indigo-900 to-slate-900 rounded-[2rem] p-6 md:p-8 text-white shadow-2xl shadow-purple-900/20 relative overflow-hidden group flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
+                <div className="md:col-span-2 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-purple-900/20 relative overflow-hidden group flex flex-col sm:flex-row items-center sm:items-start justify-between gap-8 border border-white/10">
                     {/* Decorative Elements */}
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-purple-500/20 blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
-                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 rounded-full bg-indigo-500/20 blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-indigo-500/20 blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+                    <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-purple-500/20 blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
 
                     {/* Left: Info */}
-                    <div className="relative z-10 flex flex-col justify-between h-full min-h-[140px] flex-1 text-center sm:text-left">
+                    <div className="relative z-10 flex flex-col justify-between h-full min-h-[150px] flex-1 text-center sm:text-left w-full">
                         <div>
-                            <span className="inline-block px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-bold tracking-widest uppercase border border-white/10 mb-3 text-purple-200">
-                                Faculty Pass
-                            </span>
-                            <h2 className="text-2xl md:text-4xl font-bold tracking-tight mb-2 text-white">{profile?.name || 'Loading...'}</h2>
-                            <p className="text-purple-200 font-medium text-sm">{profile?.designation}</p>
+                            <div className="flex items-center justify-center sm:justify-start gap-3 mb-4">
+                                <span className="inline-block px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-bold tracking-widest uppercase border border-white/10 text-indigo-100">
+                                    Faculty ID
+                                </span>
+                            </div>
+                            <h2 className="text-2xl md:text-5xl font-bold tracking-tighter mb-2 text-white leading-tight">{profile?.name || 'Loading...'}</h2>
+                            <p className="text-indigo-200 font-medium text-sm tracking-wide">{profile?.designation || 'Faculty Member'}</p>
                         </div>
 
                         <div className="flex flex-col gap-1 mt-6">
-                            <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Department</span>
-                            <span className="text-lg font-bold text-white">{profile?.dept}</span>
-                            <span className="font-mono text-xs tracking-wide text-gray-400">{profile?.facultyId}</span>
+                            <span className="text-indigo-300 text-[10px] font-bold uppercase tracking-widest">Department</span>
+                            <span className="text-xl font-bold text-white tracking-tight">{profile?.dept || 'General'}</span>
+                            <span className="font-mono text-xs tracking-wide text-indigo-300/80">{profile?.facultyId}</span>
                         </div>
                     </div>
 
                     {/* Right: QR Code (Always Visible) */}
-                    <div className="relative z-10 bg-white p-3 rounded-2xl shadow-xl shrink-0">
+                    <div className="relative z-10 bg-white p-3.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.3)] shrink-0 group-hover:rotate-2 transition-transform duration-500">
                         <QRCodeCanvas value={currentUser?.uid || "N/A"} size={130} fgColor="#1e1b4b" />
-                        <p className="text-[10px] text-center font-bold text-gray-400 mt-2 tracking-widest uppercase">Scan for Entry</p>
+                        <div className="mt-2 text-center">
+                            <p className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">Scan for Entry</p>
+                        </div>
                     </div>
                 </div>
 
                 {/* B. Stats & Next Class */}
-                <div className="grid grid-rows-2 gap-4 md:col-span-1 h-full">
+                <div className="grid grid-rows-2 gap-6 md:col-span-1 h-full">
 
                     {/* Next/Active Class Card */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 relative overflow-hidden flex flex-col justify-center min-h-[160px]">
+                    <div className="bg-white rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden flex flex-col justify-center min-h-[160px] group hover:border-purple-100 transition-colors">
                         {activeClass ? (
                             <>
-                                <div className="absolute right-4 top-4 w-2 h-2 rounded-full bg-green-500 animate-pulse ring-4 ring-green-100"></div>
-                                <p className="text-xs text-green-600 font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <Clock size={14} /> Ongoing
+                                <div className="absolute right-6 top-6 w-3 h-3 rounded-full bg-green-500 animate-pulse ring-4 ring-green-100"></div>
+                                <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                                    <Clock size={12} strokeWidth={3} /> Ongoing Session
                                 </p>
-                                <h3 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2">{activeClass.subject}</h3>
-                                <p className="text-gray-500 text-xs mt-1 font-medium">{activeClass.context}</p>
+                                <h3 className="text-xl font-bold text-slate-900 leading-tight line-clamp-2 mb-1 group-hover:text-purple-700 transition-colors">{activeClass.subject}</h3>
+                                <p className="text-slate-500 text-xs font-medium flex items-center gap-1">
+                                    <MapPin size={10} /> {activeClass.context}
+                                </p>
+                                <div className="mt-4 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div className="bg-green-500 h-full rounded-full w-[70%] animate-pulse"></div>
+                                </div>
                             </>
                         ) : nextClass ? (
                             <>
-                                <p className="text-xs text-purple-600 font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <Calendar size={14} /> Up Next
+                                <p className="text-[10px] text-purple-600 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                                    <Coffee size={12} strokeWidth={3} /> Up Next
                                 </p>
-                                <h3 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2">{nextClass.subject}</h3>
-                                <div className="mt-auto pt-2">
-                                    <span className="text-2xl font-bold text-gray-900 tracking-tighter">{nextClass.startTime}</span>
-                                    <p className="text-xs text-gray-400 font-medium">{nextClass.context}</p>
+                                <h3 className="text-xl font-bold text-slate-900 leading-tight line-clamp-2  mb-2 group-hover:text-purple-700 transition-colors">{nextClass.subject}</h3>
+                                <div className="mt-auto flex justify-between items-end border-t border-slate-50 pt-3">
+                                    <span className="text-2xl font-bold text-slate-900 tracking-tighter">{nextClass.startTime}</span>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
+                                        Room {nextClass.room || 'N/A'}
+                                    </span>
                                 </div>
                             </>
                         ) : (
                             <div className="flex flex-col items-center justify-center text-center h-full">
-                                <CheckCircle className="text-gray-300 mb-2" size={32} />
-                                <p className="text-sm font-bold text-gray-900">All Caught Up!</p>
-                                <p className="text-xs text-gray-400 mt-1">No more classes today.</p>
+                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-3">
+                                    <CheckCircle size={24} />
+                                </div>
+                                <p className="text-sm font-bold text-slate-900">All Caught Up!</p>
+                                <p className="text-xs text-slate-400 mt-1">No more classes today.</p>
                             </div>
                         )}
                     </div>
 
                     {/* Stats Compact */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-purple-50 rounded-[1.5rem] p-4 flex flex-col justify-center items-center text-center hover:bg-purple-100 transition-colors cursor-default">
-                            <span className="text-3xl font-black text-purple-600 tracking-tight">{todaysClasses.length}</span>
+                        <div className="bg-purple-50 rounded-[2rem] p-4 flex flex-col justify-center items-center text-center hover:bg-purple-100 transition-colors cursor-default border border-purple-100">
+                            <span className="text-4xl font-black text-purple-600 tracking-tighter">{todaysClasses.length}</span>
                             <span className="text-[10px] uppercase font-bold text-purple-400 mt-1 tracking-wide">Sessions</span>
                         </div>
-                        <div className="bg-indigo-50 rounded-[1.5rem] p-4 flex flex-col justify-center items-center text-center hover:bg-indigo-100 transition-colors cursor-default">
-                            <Briefcase className="text-indigo-600 mb-1" size={24} />
-                            <span className="text-[10px] uppercase font-bold text-indigo-400 mt-1 tracking-wide">Work Mode</span>
+                        <div className="bg-white rounded-[2rem] p-4 flex flex-col justify-center items-center text-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100">
+                            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-2">
+                                <LayoutDashboard size={18} />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Work Mode</span>
                         </div>
                     </div>
                 </div>
 
-                {/* C. Teaching Timeline */}
-                <div className="md:col-span-3 bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-6 text-lg">
-                        <Users size={20} className="text-purple-600" /> Today's Schedule
-                    </h3>
+                {/* C. Teaching Timeline (Full Width) */}
+                <div className="md:col-span-3 bg-white rounded-[2.5rem] p-8 shadow-[0_2px_30px_rgb(0,0,0,0.02)] border border-slate-100">
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="font-bold text-slate-900 flex items-center gap-3 text-lg">
+                            <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center">
+                                <Users size={18} />
+                            </div>
+                            Today's Schedule
+                        </h3>
+                    </div>
 
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {todaysClasses.length > 0 ? todaysClasses.map((item, idx) => {
                             const isActive = activeClass === item;
                             return (
-                                <div key={idx} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isActive ? 'bg-purple-50 border-purple-200 shadow-sm ring-1 ring-purple-200' : 'bg-white border-gray-100 hover:border-gray-200'
+                                <div key={idx} className={`relative p-5 rounded-2xl border transition-all duration-300 group hover:-translate-y-1 ${isActive ? 'bg-purple-50 border-purple-200 shadow-lg shadow-purple-100' : 'bg-white border-slate-100 hover:border-purple-100 hover:shadow-md'
                                     }`}>
-                                    <div className="min-w-[4rem] text-center shrink-0">
-                                        <p className={`text-sm font-bold ${isActive ? 'text-purple-700' : 'text-gray-900'}`}>{item.startTime}</p>
-                                        <p className="text-[10px] text-gray-500 font-medium">{item.endTime}</p>
-                                    </div>
-                                    <div className={`w-1 h-8 rounded-full shrink-0 ${isActive ? 'bg-purple-500' : 'bg-gray-200'}`}></div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-sm text-gray-900 truncate">{item.subject}</h4>
-                                        <p className="text-xs text-gray-500 mt-0.5 truncate">{item.context}</p>
-                                    </div>
-                                    {isActive && (
-                                        <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-green-100 text-green-700 text-[10px] font-bold tracking-wide uppercase animate-pulse">
-                                            Live
+                                    <div className="flex justify-between items-start mb-3">
+                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider ${isActive ? 'bg-white text-purple-700 shadow-sm' : 'bg-slate-50 text-slate-500'}`}>
+                                            {item.startTime}
                                         </span>
-                                    )}
+                                        {isActive && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>}
+                                    </div>
+
+                                    <h4 className={`font-bold text-sm truncate mb-1 ${isActive ? 'text-purple-900' : 'text-slate-900'}`}>{item.subject}</h4>
+                                    <p className="text-xs text-slate-500 font-medium truncate mb-4">{item.context}</p>
+
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100/50">
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">Room {item.room || 'N/A'}</span>
+                                        <ChevronRight size={14} className="text-slate-300 group-hover:text-purple-400 transition-colors" />
+                                    </div>
                                 </div>
                             )
                         }) : (
-                            <div className="text-center py-10 opacity-50">
-                                <BookOpen size={40} className="mx-auto mb-3 text-gray-300" />
-                                <p className="text-gray-500 text-sm font-medium">No teaching schedule for today.</p>
+                            <div className="col-span-full text-center py-10 opacity-50 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                <BookOpen size={40} className="mx-auto mb-3 text-slate-300" />
+                                <p className="text-slate-500 text-sm font-medium">No teaching schedule for today.</p>
                             </div>
                         )}
                     </div>

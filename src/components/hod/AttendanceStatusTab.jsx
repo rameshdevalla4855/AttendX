@@ -1,13 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../services/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { academicService } from '../../services/academicService'; // Import Service
-import { Download, Filter, Search, UserCheck, UserX, Clock } from 'lucide-react';
+import { Download, Filter, Search, UserCheck, UserX, Clock, Users, CheckCircle, XCircle } from 'lucide-react';
 
 // Helper: Normalize Department Names for HOD Scope (Broad)
-// Helper: Normalize Department Names for HOD Scope (Broad)
-// groups CSM/AID under AIDS for permission visibility
 const getBroadDept = (dept) => {
     if (!dept) return '';
     const d = dept.toUpperCase().replace(/[^A-Z]/g, '');
@@ -24,9 +22,6 @@ const getBroadDept = (dept) => {
 };
 
 // Helper: Normalize Branch for Filtering (Strict)
-// Distinguishes CSM from AID, but handles aliases (AIDS=AID)
-// Helper: Normalize Branch for Filtering (Strict)
-// Distinguishes CSM, IOT, AID from each other
 const getStrictBranch = (branch) => {
     if (!branch) return '';
     const b = branch.toUpperCase().replace(/[^A-Z]/g, '');
@@ -34,7 +29,7 @@ const getStrictBranch = (branch) => {
     // Explicit Aliases
     if (['AID', 'AIDS', 'AI&DS'].includes(b)) return 'AID';
     if (['IOT', 'CSIOT', 'CS-IOT'].includes(b)) return 'IOT';
-    if (['CSM', 'CS-ML', 'AIML'].includes(b)) return 'CSM'; // Assuming CSM covers AIML if not separate
+    if (['CSM', 'CS-ML', 'AIML'].includes(b)) return 'CSM';
 
     return b;
 };
@@ -112,17 +107,8 @@ export default function AttendanceStatusTab({ profile }) {
                 setAttendanceMap(statusMap);
 
                 // B. Fetch Students
-                // Strategy: Fetch ALL students if no specific other filters to allow flexible client-side dept matching
-                // BUT extracting all students is heavy.
-                // Optimization: If HOD is locked to 'AIDS', we can't just query 'dept'=='AIDS' because students are 'AID' or 'CSM'.
-                // So we must fetch all students and filter client side OR use multiple queries.
-                // For prototype scale (hundreds of students), fetching all students is okay.
-
                 const studentsRef = collection(db, "students");
                 const constraints = [];
-
-                // Only apply strict DB filter if it's NOT a normalized complex dept like AIDS
-                // Actually, let's rely on Client Side filtering for Dept to be safe with the AID/CSM issue.
 
                 if (filters.year) {
                     const y = filters.year;
@@ -177,20 +163,30 @@ export default function AttendanceStatusTab({ profile }) {
     }, [filters.dept, filters.year, filters.branch, filters.section, profile]);
 
     // Derived Data
-    const getStatus = (uid) => {
-        const log = attendanceMap[uid];
-        if (!log) return 'ABSENT';
-        return log.status;
-    };
+    const displayStudents = useMemo(() => {
+        return students.filter(s => {
+            const query = filters.search.toLowerCase();
+            return (
+                s.name?.toLowerCase().includes(query) ||
+                s.rollNumber?.toString().toLowerCase().includes(query) ||
+                s.id?.toLowerCase().includes(query)
+            );
+        });
+    }, [students, filters.search]);
 
-    const displayStudents = students.filter(s => {
-        const query = filters.search.toLowerCase();
-        return (
-            s.name?.toLowerCase().includes(query) ||
-            s.rollNumber?.toString().toLowerCase().includes(query) ||
-            s.id?.toLowerCase().includes(query)
-        );
-    });
+    // Calculate Summary Stats for CURRENT View
+    const summary = useMemo(() => {
+        let present = 0;
+        let left = 0;
+        let absent = 0;
+        displayStudents.forEach(s => {
+            const st = attendanceMap[s.id] || attendanceMap[s.uid] || attendanceMap[s.rollNumber];
+            if (!st) absent++;
+            else if (st.status === 'INSIDE') present++;
+            else left++;
+        });
+        return { present, left, absent, total: displayStudents.length };
+    }, [displayStudents, attendanceMap]);
 
     const exportCSV = () => {
         const headers = ["Roll No", "Name", "Dept", "Year", "Branch", "Status", "Last Punch"];
@@ -212,134 +208,135 @@ export default function AttendanceStatusTab({ profile }) {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header ... */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Attendance Status</h2>
-                    <p className="text-sm text-gray-500">Live roster view {profile?.dept ? `for ${profile.dept}` : 'by Department'}.</p>
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Attendance Roster</h2>
+                    <p className="text-sm text-gray-500">Live view of student presence {profile?.dept ? `for ${profile.dept}` : ''}.</p>
                 </div>
                 <button
                     onClick={exportCSV}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 font-semibold text-sm"
                 >
-                    <Download size={18} /> Export List
+                    <Download size={16} /> Export CSV
                 </button>
             </div>
 
-            {/* Filter Toolbar */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-4">
-                {/* Search */}
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search Name or Roll No..."
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={filters.search}
-                        onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    />
+            {/* Filter Bar & Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 shrink-0">
+                {/* Filters */}
+                <div className="lg:col-span-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        <Filter size={14} /> Filter Students
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search Name or Roll No..."
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                                value={filters.search}
+                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                            />
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                            {!profile?.dept && (
+                                <SelectFilter
+                                    value={filters.dept}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value }))}
+                                    options={[
+                                        { value: "", label: "All Depts" },
+                                        { value: "CSE", label: "CSE" },
+                                        { value: "AIDS", label: "AIDS" },
+                                        { value: "ECE", label: "ECE" }
+                                    ]}
+                                />
+                            )}
+                            <SelectFilter
+                                value={filters.year}
+                                onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
+                                options={[
+                                    { value: "", label: "All Years" },
+                                    { value: "1", label: "1st Year" },
+                                    { value: "2", label: "2nd Year" },
+                                    { value: "3", label: "3rd Year" },
+                                    { value: "4", label: "4th Year" }
+                                ]}
+                            />
+                            <SelectFilter
+                                value={filters.branch}
+                                onChange={(e) => setFilters(prev => ({ ...prev, branch: e.target.value }))}
+                                options={[
+                                    { value: "", label: "All Branches" },
+                                    ...structureBranches.map(b => ({ value: b, label: b === 'AIDS' ? 'AID' : b }))
+                                ]}
+                            />
+                            <SelectFilter
+                                value={filters.section}
+                                onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
+                                options={[
+                                    { value: "", label: "All Sec" },
+                                    ...structureSections.map(s => ({ value: s, label: `Sec ${s}` }))
+                                ]}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Dropdowns */}
-                <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0">
-                    <select
-                        className={`px - 3 py - 2 border border - gray - 300 rounded - lg bg - gray - 50 focus: outline - none focus: border - indigo - 500 ${profile?.dept ? 'opacity-70 cursor-not-allowed bg-gray-100' : ''} `}
-                        value={filters.dept}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value }))}
-                        disabled={!!profile?.dept} // Lock if HOD has department
-                    >
-                        <option value="">All Depts</option>
-                        <option value="CSE">CSE</option>
-                        <option value="AIDS">AID</option>
-                        <option value="ECE">ECE</option>
-                        <option value="MECH">MECH</option>
-                        <option value="CIVIL">CIVIL</option>
-                    </select>
-
-                    <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-indigo-500"
-                        value={filters.year}
-                        onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
-                    >
-                        <option value="">All Years</option>
-                        <option value="1">1ST</option>
-                        <option value="2">2ND</option>
-                        <option value="3">3RD</option>
-                        <option value="4">4TH</option>
-                    </select>
-
-                    <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-indigo-500"
-                        value={filters.branch}
-                        onChange={(e) => setFilters(prev => ({ ...prev, branch: e.target.value }))}
-                    >
-                        <option value="">All Branches</option>
-                        {structureBranches.length > 0 ? (
-                            structureBranches.map(b => (
-                                <option key={b} value={b}>
-                                    {b === 'AIDS' ? 'AID' : b}
-                                </option>
-                            ))
-                        ) : (
-                            <>
-                                <option value="CSE">CSE</option>
-                                <option value="AIDS">AID</option>
-                                <option value="ECE">ECE</option>
-                                <option value="MECH">MECH</option>
-                                <option value="CIVIL">CIVIL</option>
-                                <option value="EEE">EEE</option>
-                                <option value="IT">IT</option>
-                            </>
-                        )}
-                    </select>
-
-                    <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-indigo-500"
-                        value={filters.section}
-                        onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
-                    >
-                        <option value="">All Sections</option>
-                        {structureSections.map(s => (
-                            <option key={s} value={s}>{s}</option>
-                        ))}
-                    </select>
+                {/* Summary Card */}
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 text-white shadow-lg flex flex-col justify-center">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase">Filtered Count</span>
+                        <Users size={16} className="text-white opacity-50" />
+                    </div>
+                    <div className="flex items-end gap-2">
+                        <span className="text-3xl font-bold leading-none">{summary.present}</span>
+                        <span className="text-sm text-green-400 font-bold mb-1">Present</span>
+                    </div>
+                    <div className="mt-2 flex gap-3 text-[10px] font-medium text-slate-400">
+                        <span>Total: <b className="text-white">{summary.total}</b></span>
+                        <span>Absent: <b className="text-white">{summary.absent}</b></span>
+                    </div>
                 </div>
             </div>
 
             {/* Results Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100 uppercase tracking-wider">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
+                <div className="overflow-auto flex-1">
+                    <table className="min-w-full text-sm text-left relative">
+                        <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-100 uppercase tracking-wider text-xs sticky top-0 z-10">
                             <tr>
-                                <th className="py-3 px-6">Student Info</th>
-                                <th className="py-3 px-6">Academic</th>
-                                <th className="py-3 px-6">Status</th>
-                                <th className="py-3 px-6 text-right">Last Update</th>
+                                <th className="py-3 px-6 bg-gray-50">Student Info</th>
+                                <th className="py-3 px-6 bg-gray-50">Academic</th>
+                                <th className="py-3 px-6 bg-gray-50">Status</th>
+                                <th className="py-3 px-6 bg-gray-50 text-right">Last Update</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {loading ? (
                                 <tr><td colSpan="4" className="py-12 text-center text-gray-500">Loading live data...</td></tr>
                             ) : displayStudents.length === 0 ? (
-                                <tr><td colSpan="4" className="py-12 text-center text-gray-500">No students found matching filters.</td></tr>
+                                <tr><td colSpan="4" className="py-12 text-center text-gray-400 flex flex-col items-center justify-center gap-2">
+                                    <Search size={32} className="opacity-20" />
+                                    No students found matching filters.
+                                </td></tr>
                             ) : (
                                 displayStudents.map(student => {
-                                    // Robust Lookup: Check ID, UID, or RollNo
                                     const status = attendanceMap[student.id] ||
                                         attendanceMap[student.uid] ||
                                         attendanceMap[student.rollNumber] ||
                                         { status: 'ABSENT' };
 
                                     return (
-                                        <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={student.id} className="hover:bg-indigo-50/30 transition-colors group">
                                             <td className="py-3 px-6">
-                                                <div className="font-bold text-gray-900">{student.name}</div>
-                                                <div className="text-xs text-gray-400 font-mono">{student.rollNumber || student.rollNo || student.id.slice(0, 8)}</div>
+                                                <div className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{student.name}</div>
+                                                <div className="text-xs text-gray-400 font-mono">{student.rollNumber || student.rollNo || student.id}</div>
                                             </td>
                                             <td className="py-3 px-6">
-                                                <div className="text-gray-600">{student.dept}</div>
+                                                <div className="text-gray-600 font-medium">{student.dept}</div>
                                                 <div className="text-xs text-gray-400">Year {student.year} • Sec {student.section || '-'}</div>
                                             </td>
                                             <td className="py-3 px-6">
@@ -355,7 +352,7 @@ export default function AttendanceStatusTab({ profile }) {
                         </tbody>
                     </table>
                 </div>
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                <div className="p-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500 shrink-0">
                     <span>Showing {displayStudents.length} students</span>
                     <span>Status sync: Real-time</span>
                 </div>
@@ -364,27 +361,48 @@ export default function AttendanceStatusTab({ profile }) {
     );
 }
 
+function SelectFilter({ value, onChange, options }) {
+    return (
+        <div className="relative">
+            <select
+                className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg bg-gray-50 text-xs font-bold text-gray-600 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none cursor-pointer hover:border-indigo-300 transition-colors"
+                value={value}
+                onChange={onChange}
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+        </div>
+    );
+}
+
 function StatusBadge({ status }) {
     if (status === 'INSIDE') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                Present
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm">
+                <CheckCircle size={10} className="fill-current" />
+                PRESENT
             </span>
         );
     }
     if (status === 'LEFT') {
         return (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">
-                <UserCheck size={12} />
-                Checked Out
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                <Clock size={10} />
+                LEFT
             </span>
         );
     }
     return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">
-            <UserX size={12} />
-            Absent
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-400 border border-gray-200">
+            <XCircle size={10} />
+            ABSENT
         </span>
     );
 }

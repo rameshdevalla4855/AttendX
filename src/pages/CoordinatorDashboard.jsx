@@ -16,10 +16,11 @@ import TimetableManager from '../components/coordinator/TimetableManager';
 import NotificationManagerTab from '../components/hod/NotificationManagerTab';
 import AttendanceStatusTab from '../components/hod/AttendanceStatusTab';
 import ClassMonitorTab from '../components/coordinator/ClassMonitorTab';
+import CoordinatorHomeTab from '../components/coordinator/CoordinatorHomeTab';
 
 export default function CoordinatorDashboard() {
     const { currentUser, logout } = useAuth();
-    const [activeTab, setActiveTab] = useState('structure');
+    const [activeTab, setActiveTab] = useState('home');
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [profile, setProfile] = useState(null);
 
@@ -114,73 +115,100 @@ export default function CoordinatorDashboard() {
         }
     };
 
+    // --- RENDER HELPERS ---
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'home': return <CoordinatorHomeTab profile={profile} setActiveTab={setActiveTab} />;
+            case 'structure': return <StructureManager profile={profile} />;
+            case 'faculty': return <FacultyMapper profile={profile} />;
+            case 'timetable': return <TimetableManager profile={profile} />;
+            case 'monitor': return <ClassMonitorTab profile={profile} />;
+            case 'status': return <AttendanceStatusTab profile={profile} />;
+            case 'notify': return <NotificationManagerTab profile={profile} role="coordinator" />;
+            default: return <CoordinatorHomeTab profile={profile} setActiveTab={setActiveTab} />;
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex flex-col">
+        <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex">
             <Helmet>
                 <title>Coordinator Portal | SFM System</title>
             </Helmet>
             <Toaster position="top-center" richColors />
 
-            {/* HEADER - Fixed Glass */}
-            <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
+            {/* DESKTOP SIDEBAR */}
+            <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 fixed h-full z-20">
+                <div className="p-6 border-b border-gray-100 flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center text-white">
                         <Layout size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">SFM Admin</h1>
-                        <p className="text-[10px] text-gray-500 font-semibold tracking-wide uppercase mt-0.5">Coordinator</p>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">SFM Admin (v2)</h1>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">Coordinator</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Global Scan Button */}
-                    <button
-                        onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
-                        className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-bold text-xs shadow-md shadow-indigo-200"
-                    >
-                        <ScanLine size={14} />
-                        SCAN ID
-                    </button>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-2">Main Menu</p>
+                    <SidebarItem id="home" label="Dashboard" icon={Layout} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="structure" label="Structure" icon={GitBranch} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="faculty" label="Faculty Map" icon={Users} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                    <button
-                        onClick={() => setIsProfileOpen(true)}
-                        className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
-                    >
-                        {profile?.name?.charAt(0) || <User size={18} />}
-                    </button>
+                    <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Management</p>
+                    <SidebarItem id="timetable" label="Timetable" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="monitor" label="Class Monitor" icon={PieChart} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="status" label="Attd. Status" icon={ScanLine} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="notify" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
-            </header>
 
-            <UserProfile
-                isOpen={isProfileOpen}
-                onClose={() => setIsProfileOpen(false)}
-                profile={profile}
-                onLogout={logout}
-                role="coordinator"
-            />
 
-            {/* MAIN CONTENT */}
-            <main className="flex-1 pt-20 pb-28 px-4 md:px-6 max-w-7xl mx-auto w-full">
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <div className="min-h-[500px]">
-                        {activeTab === 'structure' && <StructureManager profile={profile} />}
-                        {activeTab === 'faculty' && <FacultyMapper profile={profile} />}
-                        {activeTab === 'timetable' && <TimetableManager profile={profile} />}
-                        {activeTab === 'monitor' && <ClassMonitorTab profile={profile} />}
-                        {activeTab === 'status' && <AttendanceStatusTab profile={profile} />}
-                        {activeTab === 'notify' && <NotificationManagerTab profile={profile} role="coordinator" />}
+            </aside>
+
+            {/* MAIN CONTENT AREA */}
+            <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+                {/* HEADER */}
+                <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-200 z-10 px-6 py-4 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800 hidden md:block">
+                        {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                    </h2>
+
+                    {/* Mobile Logo */}
+                    <div className="md:hidden flex items-center gap-2">
+                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                            <Layout size={16} />
+                        </div>
+                        <span className="font-bold text-gray-900">Coordinator (v2)</span>
                     </div>
-                </div>
-            </main>
 
-            {/* BOTTOM NAVIGATION */}
-            <nav className="fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl z-40 flex justify-between items-center px-4 py-2 ring-1 ring-gray-900/5">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
+                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold text-xs shadow-md shadow-indigo-200"
+                        >
+                            <ScanLine size={16} />
+                            Global Scanner
+                        </button>
+                        <button
+                            onClick={() => setIsProfileOpen(true)}
+                            className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold hover:bg-indigo-100 transition-colors"
+                        >
+                            {profile?.name?.charAt(0) || <User size={20} />}
+                        </button>
+                    </div>
+                </header>
+
+                <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
+                    {renderContent()}
+                </main>
+            </div>
+
+            {/* MOBILE BOTTOM NAV - Updated Style */}
+            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl z-40 flex justify-between items-center px-2 py-2 ring-1 ring-gray-900/5">
+                <NavTab id="home" label="Home" icon={Layout} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="structure" label="Struct" icon={GitBranch} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <NavTab id="faculty" label="Faculty" icon={Users} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                {/* Mobile Scan Button */}
-                <div className="relative -top-6">
+                {/* Mobile Scan Button - Floating Center */}
+                <div className="relative -top-5">
                     <button
                         onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
                         className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-300 border-4 border-slate-50 flex items-center justify-center transform hover:scale-105 transition-transform"
@@ -189,7 +217,6 @@ export default function CoordinatorDashboard() {
                     </button>
                 </div>
 
-                <NavTab id="timetable" label="Time" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="monitor" label="Classes" icon={PieChart} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="notify" label="Notify" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
             </nav>
@@ -255,7 +282,31 @@ export default function CoordinatorDashboard() {
                     </div>
                 </div>
             )}
+            <UserProfile
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+                profile={profile}
+                onLogout={logout}
+                role="coordinator"
+            />
         </div>
+    );
+}
+
+function SidebarItem({ id, label, icon: Icon, activeTab, setActiveTab }) {
+    const isActive = activeTab === id;
+    return (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive
+                ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200 transform scale-[1.02]'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+        >
+            <Icon size={20} className={`relative z-10 transition-colors ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+            <span className={`text-sm font-bold relative z-10 ${isActive ? 'font-extrabold' : 'font-medium'}`}>{label}</span>
+            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 rounded-r-full"></div>}
+        </button>
     );
 }
 
@@ -264,20 +315,18 @@ function NavTab({ id, label, icon: Icon, activeTab, setActiveTab }) {
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`relative flex flex-col items-center gap-1 transition-all duration-300 w-14 ${isActive ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
-                }`}
+            className={`relative flex flex-col items-center gap-1 transition-all duration-300 min-w-[3.5rem]`}
         >
-            <div className={`p-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-50 -translate-y-2 shadow-sm' : ''
+            <div className={`p-2 rounded-xl transition-all duration-300 ${isActive
+                ? 'bg-indigo-100 text-indigo-700 -translate-y-2'
+                : 'text-gray-400'
                 }`}>
                 <Icon size={isActive ? 20 : 18} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={`text-[9px] font-bold transition-all duration-300 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 absolute'
+            <span className={`text-[10px] font-bold transition-all duration-300 ${isActive ? 'opacity-100 translate-y-0 text-indigo-700' : 'opacity-0 translate-y-2 absolute'
                 }`}>
                 {label}
             </span>
-            {isActive && (
-                <span className="absolute -bottom-2 w-1 h-1 bg-indigo-600 rounded-full"></span>
-            )}
         </button>
     );
 }
