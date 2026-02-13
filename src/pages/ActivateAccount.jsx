@@ -122,7 +122,7 @@ export default function ActivateAccount() {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
             <Helmet>
-                <title>Activate Account | SFM System</title>
+                <title>Activate Account | AttendX</title>
             </Helmet>
             <div className="px-8 py-8 text-left bg-white shadow-xl rounded-2xl w-full max-w-md">
                 <div className="text-center mb-6">

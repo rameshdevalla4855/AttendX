@@ -56,8 +56,8 @@ export default function Login() {
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
             <div className="px-8 py-8 text-left bg-white shadow-xl rounded-2xl w-96 border border-gray-100">
                 <div className="text-center mb-6">
-                    <h3 className="text-3xl font-extrabold text-blue-900">SFM Login</h3>
-                    <p className="text-gray-500 text-sm mt-1">Student & Faculty Monitoring</p>
+                    <h3 className="text-3xl font-extrabold text-blue-900">AttendX Login</h3>
+                    <p className="text-gray-500 text-sm mt-1">Smart Attendance & Monitoring</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>

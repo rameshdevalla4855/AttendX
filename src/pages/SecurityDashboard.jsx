@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { ScanLine, List, AlertTriangle, User, Shield, Home } from 'lucide-react';
 import { db } from '../services/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import gniLogo from '../assets/gni-logo.png';
 
 // Import Security Tabs
 import SecurityHomeTab from '../components/security/SecurityHomeTab';
@@ -49,7 +50,7 @@ export default function SecurityDashboard() {
     return (
         <div className="flex h-screen bg-black font-sans text-gray-900 overflow-hidden">
             <Helmet>
-                <title>Security Command | SFM System</title>
+                <title>Security Command | AttendX</title>
             </Helmet>
 
             <UserProfile
@@ -112,7 +113,7 @@ export default function SecurityDashboard() {
                 {/* Header Overlay for Scanner, Solid for others */}
                 <header className={`px-6 py-4 flex justify-between items-center z-20 ${activeTab === 'scan' ? 'absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent text-white' : 'bg-white border-b border-gray-200 text-gray-900'
                     }`}>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                         {/* Mobile Profile Toggle */}
                         <button
                             onClick={() => setIsProfileOpen(true)}
@@ -129,9 +130,16 @@ export default function SecurityDashboard() {
                         </div>
                     </div>
 
-                    {/* Status Indicator */}
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold border ${activeTab === 'scan' ? 'bg-white/10 border-white/20 text-white' : 'bg-green-50 border-green-200 text-green-700'}`}>
-                        LIVE
+                    {/* Centered Logo */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+                        <img src={gniLogo} alt="GNI Logo" className={`h-12 w-auto object-contain ${activeTab === 'scan' ? 'brightness-0 invert' : 'mix-blend-multiply'}`} />
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-1 justify-end">
+                        {/* Status Indicator */}
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${activeTab === 'scan' ? 'bg-white/10 border-white/20 text-white' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                            LIVE
+                        </div>
                     </div>
                 </header>
 

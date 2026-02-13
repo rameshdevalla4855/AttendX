@@ -30,8 +30,8 @@ export default function VisitorLogin() {
         setLoading(true);
         setError('');
 
-        const generatedEmail = `${formData.mobile}@visitor.sfm.com`;
-        const generatedPassword = `sfm_vms_${formData.mobile}`;
+        const generatedEmail = `${formData.mobile}@visitor.attendx.com`;
+        const generatedPassword = `attendx_vms_${formData.mobile}`;
 
         try {
             let userCred;

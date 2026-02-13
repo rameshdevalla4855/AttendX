@@ -9,6 +9,7 @@ import QrScanner from '../components/QrScanner';
 import StudentDetailModal from '../components/hod/StudentDetailModal';
 import { Toaster, toast } from 'sonner';
 import { User, Briefcase, MapPin, Calendar, Home, History, LogOut, ScanLine, Bell } from 'lucide-react';
+import gniLogo from '../assets/gni-logo.png';
 
 // Tabs
 import FacultyHomeTab from '../components/faculty/FacultyHomeTab';
@@ -207,7 +208,7 @@ export default function FacultyDashboard() {
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 font-sans text-gray-900">
             <Helmet>
-                <title>Faculty Dashboard | SFM System</title>
+                <title>Faculty Dashboard | AttendX</title>
             </Helmet>
             <Toaster position="top-center" richColors />
 
@@ -215,17 +216,22 @@ export default function FacultyDashboard() {
 
             {/* Header */}
             <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                     <div className="w-10 h-10 bg-purple-600 rounded-xl shadow-lg shadow-purple-200 flex items-center justify-center text-white shrink-0">
                         <Briefcase size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">SFM Faculty</h1>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX Faculty</h1>
                         <p className="text-[10px] text-gray-500 font-semibold tracking-wide uppercase mt-0.5">Academic Portal</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                {/* Centered Logo */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+                    <img src={gniLogo} alt="GNI Logo" className="h-12 w-auto object-contain mix-blend-multiply" />
+                </div>
+
+                <div className="flex items-center gap-3 flex-1 justify-end">
                     <button
                         onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
                         className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all font-bold text-xs shadow-md shadow-purple-200"

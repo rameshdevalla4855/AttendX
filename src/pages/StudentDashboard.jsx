@@ -7,6 +7,7 @@ import { Helmet } from 'react-helmet-async';
 import UserProfile from '../components/UserProfile';
 import { academicService } from '../services/academicService';
 import { User, ShieldCheck, Calendar, Home, History, LogOut, BrainCircuit, ExternalLink } from 'lucide-react';
+import gniLogo from '../assets/gni-logo.png';
 
 // Tabs
 import StudentHomeTab from '../components/student/StudentHomeTab';
@@ -122,7 +123,7 @@ export default function StudentDashboard() {
     return (
         <div className="flex flex-col min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700">
             <Helmet>
-                <title>Student Dashboard | SFM System</title>
+                <title>Student Dashboard | AttendX</title>
             </Helmet>
             <Toaster position="top-center" richColors />
 
@@ -130,18 +131,23 @@ export default function StudentDashboard() {
 
             {/* Header - Sticky Glass */}
             <header className="fixed top-0 left-0 right-0 h-[72px] bg-white/80 backdrop-blur-xl border-b border-indigo-50/50 z-30 px-6 flex justify-between items-center transition-all duration-300">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                     <div className="p-2.5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl shadow-lg shadow-indigo-200/50 shrink-0 transform hover:scale-105 transition-transform duration-300">
                         <ShieldCheck size={22} className="text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none hidden xs:block font-display">SFM Student</h1>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none xs:hidden">SFM</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none hidden xs:block font-display">AttendX Student</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none xs:hidden">AttendX</h1>
                         <p className="text-[11px] text-slate-500 font-semibold tracking-wide uppercase mt-1">My Campus Portal</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                {/* Centered Logo */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+                    <img src={gniLogo} alt="GNI Logo" className="h-14 w-auto object-contain mix-blend-multiply" />
+                </div>
+
+                <div className="flex items-center gap-4 flex-1 justify-end">
                     <NotificationDropdown currentUser={currentUser} role="student" dept={profile?.departmentGroup || profile?.dept} />
 
                     <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>

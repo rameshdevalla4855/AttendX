@@ -226,7 +226,7 @@ export default function ScannerTab({ currentUser }) {
             playSuccessSound();
 
             if (userData.parentMobile && type === 'ENTRY') {
-                sendSMS(userData.parentMobile, `SFM: ${userData.name} entered campus.`);
+                sendSMS(userData.parentMobile, `AttendX: ${userData.name} entered campus.`);
             }
 
             // Reset

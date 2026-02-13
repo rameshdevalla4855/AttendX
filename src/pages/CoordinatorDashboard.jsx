@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Layout, GitBranch, Users, LogOut, Calendar, User, Bell, PieChart, ScanLine } from 'lucide-react';
 import UserProfile from '../components/UserProfile';
 import { db } from '../services/firebase';
+import gniLogo from '../assets/gni-logo.png';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import QrScanner from '../components/QrScanner';
 import StudentDetailModal from '../components/hod/StudentDetailModal';
@@ -132,7 +133,7 @@ export default function CoordinatorDashboard() {
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex">
             <Helmet>
-                <title>Coordinator Portal | SFM System</title>
+                <title>Coordinator Portal | AttendX</title>
             </Helmet>
             <Toaster position="top-center" richColors />
 
@@ -143,7 +144,7 @@ export default function CoordinatorDashboard() {
                         <Layout size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">SFM Admin (v2)</h1>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX Admin (v2)</h1>
                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">Coordinator</p>
                     </div>
                 </div>
@@ -167,20 +168,27 @@ export default function CoordinatorDashboard() {
             {/* MAIN CONTENT AREA */}
             <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
                 {/* HEADER */}
-                <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-200 z-10 px-6 py-4 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800 hidden md:block">
-                        {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                    </h2>
+                <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-200 z-10 px-6 py-4 flex justify-between items-center relative">
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-gray-800 hidden md:block">
+                            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                        </h2>
 
-                    {/* Mobile Logo */}
-                    <div className="md:hidden flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                            <Layout size={16} />
+                        {/* Mobile Logo */}
+                        <div className="md:hidden flex items-center gap-2">
+                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                                <Layout size={16} />
+                            </div>
+                            <span className="font-bold text-gray-900">AttendX</span>
                         </div>
-                        <span className="font-bold text-gray-900">Coordinator (v2)</span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    {/* Centered Logo */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+                        <img src={gniLogo} alt="GNI Logo" className="h-11 w-auto object-contain mix-blend-multiply" />
+                    </div>
+
+                    <div className="flex items-center gap-4 flex-1 justify-end">
                         <button
                             onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
                             className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold text-xs shadow-md shadow-indigo-200"

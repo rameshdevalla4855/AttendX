@@ -4,6 +4,7 @@ import { db } from '../services/firebase';
 import { collection, query, where, orderBy, limit, addDoc, onSnapshot, serverTimestamp, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
 import { LogOut, Plus, RefreshCw, Clock, CheckCircle, XCircle, ShieldAlert, User } from 'lucide-react';
+import gniLogo from '../assets/gni-logo.png';
 import { Helmet } from 'react-helmet-async';
 import { format } from 'date-fns';
 
@@ -200,18 +201,26 @@ export default function VisitorDashboard() {
         <div className="min-h-screen bg-slate-50 font-sans pb-20">
             {/* Same JSX as before... */}
             <Helmet>
-                <title>My Visitor Pass | SFM</title>
+                <title>My Visitor Pass | AttendX</title>
             </Helmet>
 
             {/* Header */}
             <header className="bg-white border-b sticky top-0 z-10 px-4 py-3 flex justify-between items-center shadow-sm">
-                <div>
+                <div className="flex-1">
                     <h1 className="font-bold text-lg text-gray-900">Visitor Pass</h1>
                     <p className="text-xs text-gray-500">Welcome, {visitorProfile?.name || 'Guest'}</p>
                 </div>
-                <button onClick={logout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
-                    <LogOut size={18} />
-                </button>
+
+                {/* Centered Logo */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden xs:block">
+                    <img src={gniLogo} alt="GNI Logo" className="h-11 w-auto object-contain mix-blend-multiply" />
+                </div>
+
+                <div className="flex-1 flex justify-end">
+                    <button onClick={logout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
+                        <LogOut size={18} />
+                    </button>
+                </div>
             </header>
 
             <main className="p-4 max-w-md mx-auto space-y-6">
