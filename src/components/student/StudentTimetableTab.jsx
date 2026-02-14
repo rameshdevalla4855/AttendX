@@ -270,8 +270,8 @@ export default function StudentTimetableTab({ timetable, profile, onBack }) {
                                 key={idx}
                                 onClick={() => !isBreak && handleSlotClick(slot)}
                                 className={`relative flex items-center p-4 rounded-2xl border transition-all duration-300 ${status === 'ongoing'
-                                        ? 'bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-200 z-10 scale-[1.01]'
-                                        : 'bg-white border-slate-100 shadow-sm hover:border-indigo-100 hover:shadow-md hover:shadow-indigo-50/50'
+                                    ? 'bg-white border-indigo-200 shadow-lg shadow-indigo-100 ring-1 ring-indigo-200 z-10 scale-[1.01]'
+                                    : 'bg-white border-slate-100 shadow-sm hover:border-indigo-100 hover:shadow-md hover:shadow-indigo-50/50'
                                     } ${isBreak ? 'bg-orange-50/50 border-orange-100 cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
                             >
 

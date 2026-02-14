@@ -82,6 +82,15 @@ export default function ScannerTab({ currentUser }) {
             return { ...d, uid: d.uid || userSnap.id, role: 'faculty', source: 'faculty' };
         }
 
+        // 4. Try Barcode ID fallback (Student IDs)
+        const qBarcode = query(collection(db, "students"), where("barcodeId", "==", id.trim()));
+        const barcodeSnap = await getDocs(qBarcode);
+        if (!barcodeSnap.empty) {
+            const d = barcodeSnap.docs[0];
+            const data = d.data();
+            return { ...data, uid: data.uid || d.id, id: d.id, role: 'student', source: 'barcode' };
+        }
+
         return null;
     };
 

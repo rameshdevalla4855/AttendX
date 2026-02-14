@@ -24,7 +24,7 @@ export default function StudentDetailModal({ student, onClose, onScanAnother }) 
             // Fetch recent 20 logs
             const q = query(
                 collection(db, "attendanceLogs"),
-                where("uid", "==", student.id),
+                where("uid", "==", student.uid || student.id),
                 orderBy("timestamp", "desc"),
                 limit(20)
             );
@@ -51,7 +51,7 @@ export default function StudentDetailModal({ student, onClose, onScanAnother }) 
         try {
             // 1. Log Security Alert
             await addDoc(collection(db, "securityAlerts"), {
-                uid: student.id,
+                uid: student.uid || student.id,
                 name: student.name,
                 rollNumber: student.rollNumber || student.id,
                 dept: student.dept || student.branch,

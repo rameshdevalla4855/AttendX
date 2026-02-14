@@ -67,9 +67,8 @@ export default function HodDashboard() {
             } else {
                 // 2. Try Barcode ID (Bio Metric Code from ID Card)
                 const studentsRef = collection(db, "students");
-                // Check boolean/numeric matches too just in case? No, Firestore is strict types.
-                // Assuming barcodeId is stored as string.
-                const qBarcode = query(studentsRef, where("barcodeId", "==", id)); // Keep barcode raw in case it's case sensitive? usually numeric/code.
+                const searchId = id.trim(); // Barcodes might have whitespace
+                const qBarcode = query(studentsRef, where("barcodeId", "==", searchId));
                 const barcodeSnap = await getDocs(qBarcode);
 
                 if (!barcodeSnap.empty) {
@@ -77,7 +76,7 @@ export default function HodDashboard() {
                     studentData = { ...d.data(), id: d.id };
                     studentId = d.id;
                 } else {
-                    // 3. Try fallback RollNumber query (if doc ID is different from rollNo field)
+                    // 3. Try fallback RollNumber query
                     const qRoll = query(studentsRef, where("rollNumber", "==", studentId));
                     const rollSnap = await getDocs(qRoll);
                     if (!rollSnap.empty) {
@@ -92,8 +91,12 @@ export default function HodDashboard() {
                 // Fetch Today's Log for Status
                 const today = new Date().toLocaleDateString('en-CA');
                 const logsRef = collection(db, "attendanceLogs");
-                // Use the resolved studentId (Roll No) for log lookup
-                const qLogsSafe = query(logsRef, where("uid", "==", studentId), where("date", "==", today));
+
+                // CRITICAL FIX: The log 'uid' might be the Auth UID (if student has account) 
+                // or their Roll Number (doc ID). We must check what the profile says.
+                const targetUid = studentData.uid || studentData.id;
+
+                const qLogsSafe = query(logsRef, where("uid", "==", targetUid), where("date", "==", today));
                 const logsSnap = await getDocs(qLogsSafe);
 
                 let status = 'ABSENT';
@@ -140,20 +143,20 @@ export default function HodDashboard() {
             <UserProfile isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} profile={profile} onLogout={logout} role="hod" />
 
             {/* 1. Top Header - Fixed Glass */}
-            <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
+            <header className="relative fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
                 <div className="flex items-center gap-3 flex-1">
                     <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center text-white shrink-0">
                         <QrCode size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX HOD</h1>
-                        <p className="text-[10px] text-gray-500 font-semibold tracking-wide uppercase mt-0.5">Control Center</p>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX</h1>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">Department Command</p>
                     </div>
                 </div>
 
-                {/* Centered Logo */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                    <img src={gniLogo} alt="GNI Logo" className="h-12 w-auto object-contain mix-blend-multiply" />
+                {/* Centered Logo - Always Visible */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <img src={gniLogo} alt="GNI Logo" className="h-9 md:h-12 w-auto object-contain mix-blend-multiply" />
                 </div>
 
                 <div className="flex items-center gap-3 flex-1 justify-end">
@@ -174,20 +177,31 @@ export default function HodDashboard() {
             </header>
 
             {/* 2. Desktop Sidebar - Fixed Left */}
-            <aside className="hidden md:flex flex-col fixed left-0 top-[73px] bottom-0 w-64 bg-white border-r border-gray-200 pt-6 px-4 z-20">
-                <nav className="space-y-2 flex-1">
-                    <div className="mb-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Overview</div>
-                    <SidebarItem id="home" label="Dashboard" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <SidebarItem id="status" label="Attendance Status" icon={FileText} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <aside className="hidden md:flex flex-col fixed left-0 top-[73px] bottom-0 w-64 bg-white border-r border-gray-200 z-20 overflow-y-auto scrollbar-hide">
+                <nav className="p-4 space-y-2 flex-1">
+                    <div className="mb-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Management Space</div>
+                    <SidebarItem id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="status" label="Analytics" icon={FileText} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="notify" label="Notices" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                    <div className="mt-8 mb-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Management</div>
-                    <SidebarItem id="structure" label="Academic Structure" icon={BookOpen} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <SidebarItem id="import" label="Import Data" icon={Upload} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <SidebarItem id="notify" label="Notifications" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <div className="mt-8 mb-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Operations</div>
+                    <SidebarItem id="structure" label="Academic Map" icon={BookOpen} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <SidebarItem id="import" label="Data Center" icon={Upload} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                    <div className="mt-8 mb-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">System</div>
-                    <SidebarItem id="settings" label="Settings" icon={Settings} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <div className="mt-8 mb-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Platform</div>
+                    <SidebarItem id="settings" label="Preferences" icon={Settings} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </nav>
+
+                {/* Sidebar Footer */}
+                <div className="p-4 border-t border-slate-50">
+                    <button
+                        onClick={logout}
+                        className="flex items-center gap-3.5 w-full px-5 py-3.5 rounded-2xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all duration-300 font-bold text-sm tracking-wide group"
+                    >
+                        <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+                        <span>Sign Out</span>
+                    </button>
+                </div>
             </aside>
 
             {/* 3. Main Content Area */}
@@ -199,8 +213,8 @@ export default function HodDashboard() {
 
             {/* 4. Mobile Bottom Navigation - Glass Dock */}
             <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl z-40 flex justify-between items-center px-4 py-2 ring-1 ring-gray-900/5">
-                <NavTab id="home" label="Home" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <NavTab id="status" label="Status" icon={FileText} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="status" label="Analytics" icon={FileText} activeTab={activeTab} setActiveTab={setActiveTab} />
 
                 {/* Mobile Scan Button - Floating Center */}
                 <div className="relative -top-6">
@@ -212,8 +226,8 @@ export default function HodDashboard() {
                     </button>
                 </div>
 
-                <NavTab id="notify" label="Notify" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <NavTab id="settings" label="Settings" icon={Settings} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="notify" label="Notices" icon={Bell} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="settings" label="Preferences" icon={Settings} activeTab={activeTab} setActiveTab={setActiveTab} />
             </nav>
 
             {/* SCANNER MODAL */}

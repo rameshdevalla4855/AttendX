@@ -86,27 +86,47 @@ export default function TimetableManager({ profile }) {
         try {
             console.log(`[TimetableManager] Loading data for ${branch} - ${year} - ${section}`);
 
-            // 1. Load Timetable
-            const data = await academicService.getTimetable(branch, year, section);
+            // 1. Fetch both schedule and current class assignments in parallel
+            const [data, assign] = await Promise.all([
+                academicService.getTimetable(branch, year, section),
+                academicService.getClassAssignments(branch, year, section)
+            ]);
+
+            setAssignments(assign);
+
+            // 2. Reconcile Schedule with current Assignments
+            // If we have a schedule, ensure faculty names match the LATEST assignments
             if (data?.schedule) {
-                setSchedule(data.schedule);
+                const reconciledSchedule = { ...data.schedule };
+
+                Object.keys(reconciledSchedule).forEach(day => {
+                    reconciledSchedule[day] = reconciledSchedule[day].map(slot => {
+                        // Skip if it's a break
+                        if (slot.subjectCode === 'BREAK') return slot;
+
+                        // Find current mapping for this subject
+                        const currentMapping = assign.find(a => a.subjectCode === slot.subjectCode);
+
+                        if (currentMapping) {
+                            // If mapping changed, update the slot snapshot
+                            if (slot.facultyId !== currentMapping.facultyId) {
+                                console.log(`[Reconcile] Updating slot: ${slot.subjectName} -> ${currentMapping.facultyName}`);
+                                return {
+                                    ...slot,
+                                    facultyId: currentMapping.facultyId,
+                                    facultyName: currentMapping.facultyName
+                                };
+                            }
+                        }
+                        return slot;
+                    });
+                });
+
+                setSchedule(reconciledSchedule);
             } else {
                 const empty = {};
                 DAYS.forEach(d => empty[d] = []);
                 setSchedule(empty);
-            }
-
-            // 2. Load Assignments (for auto-suggest)
-            // Use local variables to debug before setting state
-            const assign = await academicService.getClassAssignments(branch, year, section);
-            console.log("[TimetableManager] Raw Assignments Fetched:", assign);
-
-            if (assign && assign.length > 0) {
-                setAssignments(assign);
-                console.log(`[TimetableManager] Set ${assign.length} assignments to state.`);
-            } else {
-                console.warn("[TimetableManager] No assignments found for this class context.");
-                setAssignments([]);
             }
 
         } catch (err) {

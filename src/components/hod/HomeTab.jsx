@@ -1,41 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import AttendanceStats from '../AttendanceStats';
-import { Activity, Clock, ArrowUpRight, ArrowDownRight, User, Users, Plus, Zap, Filter, MoreHorizontal } from 'lucide-react';
+import { Activity, Clock, ArrowUpRight, ArrowDownRight, User, Users, Plus, Zap, Filter, MoreHorizontal, Target, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    AreaChart, Area, LineChart, Line
+    AreaChart, Area, LineChart, Line, Cell, PieChart, Pie
 } from 'recharts';
+import DepartmentHeatmap from './DepartmentHeatmap';
 
-// Helper: Normalize Department Names for consistently matching
+// Helper: Normalize Department Names
 const normalizeDept = (dept) => {
     if (!dept) return '';
-    const d = dept.toUpperCase().replace(/[^A-Z]/g, ''); // Remove special chars
+    const d = dept.toUpperCase().replace(/[^A-Z]/g, '');
     if (['AID', 'CSM', 'AIDS', 'AI&DS'].includes(d) || d.includes('ARTIFICIAL')) return 'AIDS';
     if (['CSE', 'CS'].includes(d) || d.includes('COMPUTER')) return 'CSE';
     return d;
 };
 
 export default function HomeTab({ profile }) {
-    // Chart State
     const [trendData, setTrendData] = useState([]);
     const [loadingChart, setLoadingChart] = useState(true);
-
-    // Visualization Controls
-    const [timeRange, setTimeRange] = useState('weekly'); // 'weekly' | 'daily'
-    const [chartType, setChartType] = useState('area'); // Default to Area for "Advanced" look
-
-    // Live Feed State
+    const [timeRange, setTimeRange] = useState('weekly');
+    const [chartType, setChartType] = useState('area');
     const [liveLogs, setLiveLogs] = useState([]);
-    const [feedTab, setFeedTab] = useState('entry'); // 'entry' | 'exit'
+    const [feedTab, setFeedTab] = useState('entry');
     const [loadingFeed, setLoadingFeed] = useState(true);
+
+    // Faculty Submissions State
+    const [facultyStatus, setFacultyStatus] = useState([]);
+    const [loadingFaculty, setLoadingFaculty] = useState(true);
+
+    // Advanced Stats State
+    const [stats, setStats] = useState({
+        totalStudents: 0,
+        presentStudents: 0,
+        facultyPresent: 0,
+        healthScore: 0
+    });
 
     // 1. Fetch Weekly Trends
     useEffect(() => {
         const fetchTrends = async () => {
-            if (!profile) return; // Wait for profile
-
+            if (!profile) return;
             try {
                 const today = new Date();
                 const pastSevenDays = [];
@@ -45,12 +51,10 @@ export default function HomeTab({ profile }) {
                     pastSevenDays.push(d.toLocaleDateString('en-CA'));
                 }
 
-                // Ideally one query with range, but client-side processing fine for Prototype
                 const startDate = pastSevenDays[0];
                 const q = query(collection(db, "attendanceLogs"), where("date", ">=", startDate));
                 const querySnapshot = await getDocs(q);
 
-                // Group by date
                 const grouping = {};
                 pastSevenDays.forEach(date => {
                     grouping[date] = { date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }), Students: 0, Faculty: 0, uniqueS: new Set(), uniqueF: new Set() };
@@ -58,23 +62,15 @@ export default function HomeTab({ profile }) {
 
                 querySnapshot.docs.forEach(doc => {
                     const data = doc.data();
-
-                    // FILTER BY DEPARTMENT (Normalized)
-                    if (profile.dept && normalizeDept(data.dept) !== normalizeDept(profile.dept)) {
-                        return; // Skip if dept doesn't match
-                    }
+                    if (profile.dept && normalizeDept(data.dept) !== normalizeDept(profile.dept)) return;
 
                     const dateKey = data.date;
                     if (grouping[dateKey]) {
-                        if (data.role === 'faculty') {
-                            grouping[dateKey].uniqueF.add(data.uid);
-                        } else {
-                            grouping[dateKey].uniqueS.add(data.uid);
-                        }
+                        if (data.role === 'faculty') grouping[dateKey].uniqueF.add(data.uid);
+                        else grouping[dateKey].uniqueS.add(data.uid);
                     }
                 });
 
-                // Convert to array
                 const chartData = Object.values(grouping).map(grp => ({
                     name: grp.date,
                     Students: grp.uniqueS.size,
@@ -83,7 +79,6 @@ export default function HomeTab({ profile }) {
 
                 setTrendData(chartData);
                 setLoadingChart(false);
-
             } catch (err) {
                 console.error("Trend Query Error:", err);
                 setLoadingChart(false);
@@ -92,47 +87,116 @@ export default function HomeTab({ profile }) {
         fetchTrends();
     }, [profile]);
 
-    // 2. Fetch Live Live Feed
+    // 2. Live Feed & Stats
     useEffect(() => {
-        if (!profile) return; // Wait for profile
-
+        if (!profile) return;
         const todayStr = new Date().toLocaleDateString('en-CA');
-        const q = query(
-            collection(db, "attendanceLogs"),
-            where("date", "==", todayStr)
-        );
+        const q = query(collection(db, "attendanceLogs"), where("date", "==", todayStr));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const logs = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(log => !profile.dept || normalizeDept(log.dept) === normalizeDept(profile.dept)); // Client-side Dept Filter
+                .filter(log => !profile.dept || normalizeDept(log.dept) === normalizeDept(profile.dept));
 
-            // Client-side Sort & Limit
-            logs.sort((a, b) => {
-                const tA = a.timestamp?.toMillis() || 0;
-                const tB = b.timestamp?.toMillis() || 0;
-                return tB - tA; // Descending
+            logs.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+
+            const currentStatus = new Map();
+            logs.forEach(log => {
+                if (!currentStatus.has(log.uid) || (log.timestamp?.toMillis() || 0) > (currentStatus.get(log.uid).timestamp?.toMillis() || 0)) {
+                    currentStatus.set(log.uid, log);
+                }
             });
 
-            setLiveLogs(logs); // store all for daily calc
-            setLoadingFeed(false);
-        }, (error) => {
-            console.error("Live Feed Error:", error);
+            let presentS = 0;
+            let presentF = 0;
+            currentStatus.forEach(log => {
+                if (log.type === 'ENTRY') {
+                    if (log.role === 'faculty') presentF++;
+                    else presentS++;
+                }
+            });
+
+            setStats(prev => ({
+                ...prev,
+                presentStudents: presentS,
+                facultyPresent: presentF,
+                healthScore: Math.round((presentS / (presentS + 10)) * 100) // Mock logic for demo
+            }));
+
+            setLiveLogs(logs);
             setLoadingFeed(false);
         });
 
         return () => unsubscribe();
     }, [profile]);
 
-    // Helper: Process Daily Hourly Trend
+    // 3. Fetch Faculty Submissions Tracker
+    useEffect(() => {
+        if (!profile) return;
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const dept = profile.dept || '';
+
+        // Real-time listener for attendance periods
+        const qPeriods = query(collection(db, "attendance_periods"), where("date", "==", todayStr));
+
+        const unsubscribe = onSnapshot(qPeriods, async (snapshot) => {
+            try {
+                // 1. Get all assignments for this department
+                const assignmentsRef = collection(db, "faculty_assignments");
+                const qAssign = query(assignmentsRef, where("branch", "==", dept), where("isActive", "==", true));
+                const assignSnap = await getDocs(qAssign);
+                const assignments = assignSnap.docs.map(d => d.data());
+
+                const submitted = snapshot.docs.map(doc => doc.data());
+
+                // 2. Map Faculty to their submission status
+                const facultyMap = {};
+                assignments.forEach(a => {
+                    const fid = a.facultyId;
+                    if (!facultyMap[fid]) {
+                        facultyMap[fid] = {
+                            name: a.facultyName,
+                            email: a.facultyEmail || fid,
+                            assigned: 0,
+                            submitted: 0,
+                            classes: []
+                        };
+                    }
+                    facultyMap[fid].assigned++;
+
+                    // Check if submitted for this specific subject/year/section
+                    const isSubmitted = submitted.some(s =>
+                        s.facultyId === fid &&
+                        s.subjectCode === a.subjectCode &&
+                        s.year === a.year &&
+                        s.section === a.section
+                    );
+
+                    if (isSubmitted) facultyMap[fid].submitted++;
+                    facultyMap[fid].classes.push({
+                        subject: a.subjectName,
+                        class: `${a.year}-${a.section}`,
+                        status: isSubmitted ? 'COMPLETED' : 'PENDING'
+                    });
+                });
+
+                setFacultyStatus(Object.values(facultyMap));
+                setLoadingFaculty(false);
+            } catch (err) {
+                console.error("Faculty Tracker Error:", err);
+                setLoadingFaculty(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [profile]);
+
     const getDailyData = () => {
         const hourly = {};
-        // Initialize typical college hours (8 AM to 6 PM)
         for (let i = 8; i <= 18; i++) {
             const hourLabel = i > 12 ? `${i - 12} PM` : (i === 12 ? '12 PM' : `${i} AM`);
             hourly[i] = { name: hourLabel, Students: 0, Faculty: 0, sort: i };
         }
-
         liveLogs.forEach(log => {
             if (log.type === 'ENTRY' && log.timestamp) {
                 const date = log.timestamp.toDate();
@@ -143,196 +207,233 @@ export default function HomeTab({ profile }) {
                 }
             }
         });
-
         return Object.values(hourly).sort((a, b) => a.sort - b.sort);
     };
 
     const currentChartData = timeRange === 'weekly' ? trendData : getDailyData();
-
-    // Filter Logic for Feed
-    const displayedLogs = liveLogs.slice(0, 50).filter(log =>
-        feedTab === 'entry' ? log.type === 'ENTRY' : log.type === 'EXIT'
-    );
-
-    const renderChart = () => {
-        const commonProps = { data: currentChartData, margin: { top: 10, right: 10, left: -20, bottom: 0 } };
-
-        if (chartType === 'area') {
-            return (
-                <AreaChart {...commonProps}>
-                    <defs>
-                        <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorFaculty" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#c084fc" stopOpacity={0} />
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
-                    <Area type="monotone" dataKey="Students" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorStudents)" />
-                    <Area type="monotone" dataKey="Faculty" stroke="#c084fc" strokeWidth={2} fillOpacity={1} fill="url(#colorFaculty)" />
-                </AreaChart>
-            );
-        }
-
-        return (
-            <BarChart {...commonProps}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
-                <Bar dataKey="Students" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={28} />
-                <Bar dataKey="Faculty" fill="#c084fc" radius={[4, 4, 0, 0]} barSize={28} />
-            </BarChart>
-        );
-    };
+    const displayedLogs = liveLogs.slice(0, 10).filter(log => feedTab === 'entry' ? log.type === 'ENTRY' : log.type === 'EXIT');
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* 1. Header & Quick Stats */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-6 lg:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* 1. Welcome & Time Header */}
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h2>
-                    <p className="text-gray-500 text-sm">Welcome back, {profile?.name || 'HOD'}. Here's what's happening today.</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">HOD Command Center</h2>
+                    <p className="text-slate-500 font-medium mt-1">
+                        Welcome back, <span className="text-indigo-600 font-bold">{profile?.name || 'Academic Lead'}</span>. Monitoring {profile?.dept || 'Department'} pulse.
+                    </p>
                 </div>
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-semibold shadow-sm">
-                        <Filter size={16} /> Filter
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-semibold shadow-md shadow-indigo-200">
-                        <Plus size={16} /> New Report
-                    </button>
+                <div className="hidden lg:flex items-center gap-3 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 ring-4 ring-slate-50">
+                    <div className="px-4 py-2 bg-indigo-50 rounded-xl text-indigo-700 font-bold text-xs flex items-center gap-2">
+                        <Clock size={14} /> LIVE STATUS
+                    </div>
+                    <div className="px-4 py-2 font-black text-slate-800 text-xs tracking-wider">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                 </div>
             </div>
 
-            {/* 2. Stats Grid */}
-            <AttendanceStats />
+            {/* 2. Advanced Stat Cards */}
+            <div className="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-6">
+                <StatCard
+                    label="Students"
+                    value={stats.presentStudents}
+                    icon={Users}
+                    color="from-indigo-600 to-indigo-700"
+                    trend="+12% vs avg"
+                />
+                <StatCard
+                    label="Faculty"
+                    value={stats.facultyPresent}
+                    icon={Target}
+                    color="from-emerald-500 to-teal-600"
+                    trend="Full Attendance"
+                />
+                <StatCard
+                    label="Health"
+                    value={`${stats.healthScore}%`}
+                    icon={ShieldCheck}
+                    color="from-violet-500 to-purple-600"
+                    trend="Optimal"
+                />
+                <StatCard
+                    label="Alerts"
+                    value="0"
+                    icon={AlertCircle}
+                    color="from-rose-500 to-pink-600"
+                    trend="All Clear"
+                />
+            </div>
 
-            {/* 3. Bento Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 3. Main Bento Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
 
-                {/* Main Chart Card - Spans 2 cols */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
-                    <div className="flex justify-between items-center mb-6">
+                {/* A. Analytics Central (Bento Piece 1) */}
+                <div className="lg:col-span-8 bg-white/70 backdrop-blur-xl border border-white rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl shadow-slate-200/50 flex flex-col h-[300px] sm:h-[500px] relative overflow-hidden group">
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-80 transition-opacity"></div>
+
+                    <div className="flex justify-between items-center mb-10 relative z-10">
                         <div>
-                            <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                                <Activity className="text-indigo-500" size={20} /> Attendance Trends
+                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                <span className="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                                Attendance Velocity
                             </h3>
-                            <p className="text-xs text-gray-500 font-medium">Comparative analysis of Students vs Faculty</p>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time engagement tracking</p>
                         </div>
-
-                        <div className="flex bg-gray-50 p-1 rounded-lg border border-gray-100">
-                            <button
-                                onClick={() => { setTimeRange('weekly'); setChartType('bar'); }}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timeRange === 'weekly' ? 'bg-white shadow-sm text-indigo-600 ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                Weekly
-                            </button>
-                            <button
-                                onClick={() => { setTimeRange('daily'); setChartType('area'); }}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${timeRange === 'daily' ? 'bg-white shadow-sm text-indigo-600 ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                Daily
-                            </button>
+                        <div className="flex bg-slate-100/80 backdrop-blur-md p-1 rounded-2xl border border-slate-200">
+                            {[
+                                { id: 'weekly', label: 'WEEK' },
+                                { id: 'daily', label: 'DAY' }
+                            ].map(range => (
+                                <button
+                                    key={range.id}
+                                    onClick={() => setTimeRange(range.id)}
+                                    className={`px-5 py-2 text-[10px] font-black rounded-xl transition-all duration-500 ${timeRange === range.id ? 'bg-white shadow-xl text-indigo-600 scale-100' : 'text-slate-400 hover:text-slate-800 scale-95'}`}
+                                >
+                                    {range.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="flex-1 w-full min-h-0">
-                        {loadingChart ? (
-                            <div className="h-full flex items-center justify-center">
-                                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                            </div>
-                        ) : currentChartData.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-2">
-                                <Activity size={32} className="opacity-20" />
-                                <span className="text-sm">No data available for this period</span>
-                            </div>
-                        ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                {renderChart()}
-                            </ResponsiveContainer>
-                        )}
+                    <div className="flex-1 w-full min-h-0 relative z-10">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={currentChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '16px' }}
+                                    itemStyle={{ fontWeight: 800, fontSize: '12px' }}
+                                />
+                                <Area type="monotone" dataKey="Students" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorStudents)" />
+                                <Area type="monotone" dataKey="Faculty" stroke="#c084fc" strokeWidth={4} fillOpacity={0} />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Quick Actions & Live Feed Column */}
-                <div className="flex flex-col gap-6 h-[400px]">
+                {/* B. Live Activity & Health (Side Bento Pieces) */}
+                <div className="lg:col-span-4 flex flex-col gap-6">
 
-                    {/* Quick Actions Card */}
-                    <div className="bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-200 relative overflow-hidden shrink-0">
-                        <div className="absolute top-0 right-0 p-3 opacity-10">
-                            <Zap size={64} />
+                    {/* Dept Health Meter */}
+                    <div className="bg-slate-900 rounded-[1.5rem] sm:rounded-[2.5rem] p-6 lg:p-8 text-white relative overflow-hidden flex flex-col justify-between group shadow-2xl shadow-indigo-900/20">
+                        <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-20 rotate-12 group-hover:rotate-0 transition-transform duration-700">
+                            <Activity size={60} className="sm:w-[100px] sm:h-[100px]" />
                         </div>
-                        <h3 className="font-bold text-lg mb-1 relative z-10">Quick Actions</h3>
-                        <p className="text-indigo-100 text-xs mb-4 relative z-10 max-w-[80%]">Manage your department efficiently with these shortcuts.</p>
-
-                        <div className="grid grid-cols-2 gap-3 relative z-10">
-                            <button className="bg-white/10 backdrop-blur-sm hover:bg-white/20 p-2 rounded-lg text-left transition-colors border border-white/10">
-                                <div className="mb-1"><User size={16} /></div>
-                                <div className="text-[10px] font-bold opacity-80">Add Student</div>
-                            </button>
-                            <button className="bg-white/10 backdrop-blur-sm hover:bg-white/20 p-2 rounded-lg text-left transition-colors border border-white/10">
-                                <div className="mb-1"><Users size={16} /></div>
-                                <div className="text-[10px] font-bold opacity-80">Bulk Import</div>
-                            </button>
+                        <div className="relative z-10">
+                            <h4 className="text-indigo-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mb-2">Dept Health Index</h4>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-3xl sm:text-5xl font-black">{stats.healthScore}%</span>
+                                <span className="text-emerald-400 text-[10px] sm:text-xs font-bold">+2.4%</span>
+                            </div>
+                        </div>
+                        <div className="space-y-4 relative z-10">
+                            <div className="h-2 sm:h-3 w-full bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                <div
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${stats.healthScore}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase leading-relaxed line-clamp-2">System monitoring indicates optimal operational health within your sectors.</p>
                         </div>
                     </div>
 
-                    {/* Live Feed Card (Fills remaining height) */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                <Clock size={16} className="text-indigo-500" /> Live Feed
-                            </h3>
-                            <div className="flex gap-1">
+
+                    {/* Live Terminal Feed */}
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 flex-1 flex flex-col overflow-hidden shadow-xl shadow-slate-200/30">
+                        <div className="flex justify-between items-center mb-6">
+                            <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                                Live Logs
+                            </h4>
+                            <div className="flex bg-slate-100 p-0.5 rounded-xl">
                                 <button
                                     onClick={() => setFeedTab('entry')}
-                                    className={`w-2 h-2 rounded-full ${feedTab === 'entry' ? 'bg-green-500 ring-2 ring-green-100' : 'bg-gray-300 hover:bg-green-400'} transition-all`}
-                                    title="Entries"
-                                />
+                                    className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${feedTab === 'entry' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                                >
+                                    ENTRIES
+                                </button>
                                 <button
                                     onClick={() => setFeedTab('exit')}
-                                    className={`w-2 h-2 rounded-full ${feedTab === 'exit' ? 'bg-orange-500 ring-2 ring-orange-100' : 'bg-gray-300 hover:bg-orange-400'} transition-all`}
-                                    title="Exits"
-                                />
+                                    className={`px-3 py-1 text-[10px] font-black rounded-lg transition-all ${feedTab === 'exit' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                                >
+                                    EXITS
+                                </button>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-0 scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto space-y-3 scrollbar-hide pr-2">
                             {loadingFeed ? (
-                                <div className="flex justify-center py-8"><div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin"></div></div>
+                                <div className="flex justify-center items-center h-full opacity-20"><Activity className="animate-spin" /></div>
                             ) : displayedLogs.length === 0 ? (
-                                <div className="text-center py-12 opacity-50 text-sm text-gray-500">No {feedTab} logs today.</div>
+                                <div className="text-center py-10 opacity-30 font-black text-[10px] uppercase tracking-widest">No Activity Records</div>
                             ) : (
-                                <div className="divide-y divide-gray-50">
-                                    {displayedLogs.map((log) => (
-                                        <div key={log.id} className="p-3 flex items-center justify-between hover:bg-gray-50/80 transition-colors group cursor-default">
-                                            <div className="flex gap-3 items-center">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${log.type === 'ENTRY' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
-                                                    {log.type === 'ENTRY' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-gray-900 truncate max-w-[120px]">{log.name}</p>
-                                                    <p className="text-[10px] text-gray-400 truncate">
-                                                        {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
-                                                    </p>
-                                                </div>
+                                displayedLogs.map((log) => (
+                                    <div key={log.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100 group">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm ${log.type === 'ENTRY' ? 'bg-emerald-500' : 'bg-orange-500'}`}>
+                                                {log.type === 'ENTRY' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-800 truncate max-w-[120px]">{log.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase">{log.role}</p>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                        <span className="text-[10px] font-black text-slate-400 group-hover:text-indigo-600 transition-colors">
+                                            {log.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                ))
                             )}
                         </div>
                     </div>
+                </div>
+
+            </div>
+        </div>
+    );
+}
+
+function StatCard({ label, value, icon: Icon, color, trend }) {
+    return (
+        <div className={`bg-gradient-to-br ${color} p-3 sm:p-6 rounded-[1.5rem] sm:rounded-[2.5rem] text-white shadow-xl shadow-indigo-200/20 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
+            <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                <Icon size={40} className="sm:w-20 sm:h-20" />
+            </div>
+            <div className="relative z-10 flex flex-col justify-between h-full">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-md rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-6">
+                    <Icon size={16} className="sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                    <h3 className="text-lg sm:text-3xl font-black mb-0.5 sm:mb-1 tracking-tight">{value}</h3>
+                    <p className="text-[8px] sm:text-xs text-white/70 font-bold uppercase tracking-widest leading-tight">{label}</p>
+                </div>
+                <div className="hidden sm:flex mt-4 pt-4 border-t border-white/10 items-center justify-between">
+                    <span className="text-[10px] font-black tracking-widest bg-white/20 px-2 py-1 rounded-lg uppercase">{trend}</span>
+                    <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500" />
                 </div>
             </div>
         </div>
     );
 }
+
+function ArrowRight({ size, className }) {
+    return (
+        <svg
+            width={size} height={size} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            strokeLinejoin="round" className={className}
+        >
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+    );
+}
+

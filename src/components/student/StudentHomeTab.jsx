@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { ShieldCheck, MapPin, Clock, Calendar, ChevronRight, Zap, TrendingUp, BookOpen, AlertCircle, BarChart3 } from 'lucide-react';
+import { ShieldCheck, MapPin, Clock, Calendar, ChevronRight, Zap, TrendingUp, BookOpen, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import VisitorRequestCard from './VisitorRequestCard';
 import AttendanceDetailModal from './AttendanceDetailModal';
@@ -129,89 +129,69 @@ export default function StudentHomeTab({ profile, status, timetable, attendanceS
                     </div>
                 </div>
 
-                {/* B. Status / Next Class - Stacked on Mobile, Col on Desktop */}
-                <div className="space-y-6 md:space-y-0 md:grid md:grid-rows-2 md:gap-6 md:col-span-1">
+                {/* B. Status / Next Class & Stats */}
+                <div className="flex flex-col gap-6 md:col-span-1">
 
-                    {/* Active/Next Class Card */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden flex flex-col justify-center group hover:shadow-[0_8px_30px_rgb(99,102,241,0.1)] transition-all duration-300">
-                        {activeClass ? (
-                            <>
-                                <div className="absolute right-6 top-6 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse ring-4 ring-green-100"></div>
-                                <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-3">
-                                    <Zap size={12} className="fill-green-600" /> Happening Now
-                                </p>
-                                <h3 className="text-2xl font-bold text-slate-900 leading-tight tracking-tight mb-1 group-hover:text-indigo-700 transition-colors">{activeClass.subject}</h3>
-                                <p className="text-slate-500 text-sm font-medium">Room {activeClass.room}</p>
-                                <div className="mt-5 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-full rounded-full w-[60%] animate-shimmer"></div>
-                                </div>
-                            </>
-                        ) : nextClass ? (
-                            <>
-                                <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-3">
-                                    <Clock size={12} /> Up Next
-                                </p>
-                                <h3 className="text-2xl font-bold text-slate-900 leading-tight tracking-tight mb-2 group-hover:text-indigo-700 transition-colors">{nextClass.subject}</h3>
-                                <div className="flex justify-between items-end mt-auto">
-                                    <p className="text-slate-500 font-medium">{nextClass.startTime}</p>
-                                    <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-600">
-                                        Room {nextClass.room}
-                                    </span>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-2 h-full flex flex-col justify-center items-center">
-                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3 text-emerald-500 ring-1 ring-emerald-100">
-                                    <CheckCircleIcon />
-                                </div>
-                                <h3 className="font-bold text-slate-900 text-lg">All Done!</h3>
-                                <p className="text-xs text-slate-400 mt-1 font-medium">No more classes today.</p>
-                            </div>
-                        )}
-                    </div>
+                    {/* Active/Next Class Card - Only if applicable */}
+                    {(activeClass || nextClass) ? (
+                        <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden flex flex-col justify-center group hover:shadow-[0_8px_30px_rgb(99,102,241,0.1)] transition-all duration-300 min-h-[140px]">
+                            {activeClass ? (
+                                <>
+                                    <div className="absolute right-6 top-6 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse ring-4 ring-green-100"></div>
+                                    <p className="text-[10px] text-green-600 font-black uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                                        <Zap size={12} className="fill-green-600" /> Happening Now
+                                    </p>
+                                    <h3 className="text-xl font-black text-slate-900 leading-tight tracking-tight mb-1 group-hover:text-indigo-700 transition-colors">{activeClass.subject}</h3>
+                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Room {activeClass.room}</p>
+                                    <div className="mt-4 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-full rounded-full w-[60%]"></div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                                        <Clock size={12} /> Up Next
+                                    </p>
+                                    <h3 className="text-xl font-black text-slate-900 leading-tight tracking-tight mb-2 group-hover:text-indigo-700 transition-colors">{nextClass.subject}</h3>
+                                    <div className="flex justify-between items-end mt-auto">
+                                        <p className="text-slate-500 text-xs font-bold">{nextClass.startTime}</p>
+                                        <span className="px-2 py-1 bg-slate-50 rounded-lg text-[9px] font-black text-slate-400 border border-slate-100 uppercase tracking-tighter">
+                                            Room {nextClass.room}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : null}
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-2 gap-4 h-full">
-                        {/* Attendance Card - Clickable */}
+                    {/* Stats Grid - Compact & Senior UI */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Attendance Card - Premium Mini */}
                         <button
                             onClick={() => setIsAnalyticsOpen(true)}
-                            className="bg-white rounded-[2rem] p-4 shadow-[0_2px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-center items-center text-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group relative overflow-hidden"
+                            className="bg-white rounded-[2rem] p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-center items-center text-center hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
                         >
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <BarChart3 size={14} className="text-slate-300" />
-                            </div>
-                            <div className="relative mb-1">
-                                <svg className="w-16 h-16 transform -rotate-90">
-                                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100" />
-                                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={175.9} strokeDashoffset={175.9 - (175.9 * percentage) / 100} className={`${percentage >= 75 ? 'text-green-500' : 'text-rose-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+                            <div className="relative mb-3">
+                                <svg className="w-14 h-14 transform -rotate-90">
+                                    <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="5" fill="transparent" className="text-slate-50" />
+                                    <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="5" fill="transparent" strokeDasharray={150.8} strokeDashoffset={150.8 - (150.8 * percentage) / 100} className={`${percentage >= 75 ? 'text-indigo-600' : 'text-rose-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
                                 </svg>
-                                <span className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${percentage >= 75 ? 'text-green-600' : 'text-rose-600'}`}>{percentage}%</span>
+                                <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-black ${percentage >= 75 ? 'text-indigo-600' : 'text-rose-600'}`}>{percentage}%</span>
                             </div>
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider group-hover:text-indigo-600 transition-colors">Attendance</span>
+                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-widest group-hover:text-indigo-600 transition-colors">Attendance</span>
                         </button>
 
-                        {/* Total Classes Card */}
-                        <div className="bg-white rounded-[2rem] p-4 shadow-[0_2px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-center items-center text-center hover:-translate-y-1 transition-transform duration-300">
-                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2 text-indigo-600">
-                                <BookOpen size={20} />
+                        {/* Total Classes Card - Premium Mini */}
+                        <div className="bg-white rounded-[2.5rem] p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col justify-center items-center text-center hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mb-3 text-indigo-600 group-hover:scale-110 transition-transform">
+                                <BookOpen size={18} />
                             </div>
-                            <span className="text-2xl font-bold text-slate-900 leading-none mb-1">{total}</span>
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Classes</span>
+                            <span className="text-2xl font-black text-slate-900 leading-none mb-1">{total}</span>
+                            <span className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Total Classes</span>
                         </div>
                     </div>
                 </div>
-
-
-
             </div>
         </div>
     );
-}
-
-function CheckCircleIcon() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-        </svg>
-    )
 }

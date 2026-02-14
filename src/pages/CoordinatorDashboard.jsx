@@ -67,7 +67,8 @@ export default function CoordinatorDashboard() {
             } else {
                 // 2. Try Barcode ID
                 const studentsRef = collection(db, "students");
-                const qBarcode = query(studentsRef, where("barcodeId", "==", id));
+                const searchId = id.trim();
+                const qBarcode = query(studentsRef, where("barcodeId", "==", searchId));
                 const barcodeSnap = await getDocs(qBarcode);
 
                 if (!barcodeSnap.empty) {
@@ -87,21 +88,27 @@ export default function CoordinatorDashboard() {
             }
 
             if (studentData) {
-                // Fetch Today's Log
+                // Fetch Today's Log for Status
                 const today = new Date().toLocaleDateString('en-CA');
                 const logsRef = collection(db, "attendanceLogs");
-                const qLogsSafe = query(logsRef, where("uid", "==", studentId), where("date", "==", today));
+
+                // CRITICAL FIX: The log 'uid' might be the Auth UID (if student has account) 
+                // or their Roll Number (doc ID). We must check what the profile says.
+                const targetUid = studentData.uid || studentData.id;
+
+                const qLogsSafe = query(logsRef, where("uid", "==", targetUid), where("date", "==", today));
                 const logsSnap = await getDocs(qLogsSafe);
 
                 let status = 'ABSENT';
                 let lastTime = null;
 
                 if (!logsSnap.empty) {
-                    const logs = logsSnap.docs.map(d => d.data()).sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-                    const latest = logs[0];
+                    const sortedLogs = logsSnap.docs.map(d => d.data()).sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+                    const latest = sortedLogs[0];
                     status = latest.type === 'ENTRY' ? 'ON CAMPUS' : 'CHECKED OUT';
                     lastTime = latest.timestamp?.toDate ? latest.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 }
+
                 setScannedProfile({ ...studentData, status, lastTime });
             } else {
                 toast.error(`Student not found for ID: ${id}`);
@@ -144,8 +151,8 @@ export default function CoordinatorDashboard() {
                         <Layout size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX Admin (v2)</h1>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">Coordinator</p>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX</h1>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">Coordinator Hub</p>
                     </div>
                 </div>
 
@@ -183,9 +190,9 @@ export default function CoordinatorDashboard() {
                         </div>
                     </div>
 
-                    {/* Centered Logo */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                        <img src={gniLogo} alt="GNI Logo" className="h-11 w-auto object-contain mix-blend-multiply" />
+                    {/* Centered Logo - Always Visible */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                        <img src={gniLogo} alt="GNI Logo" className="h-8 md:h-11 w-auto object-contain mix-blend-multiply" />
                     </div>
 
                     <div className="flex items-center gap-4 flex-1 justify-end">

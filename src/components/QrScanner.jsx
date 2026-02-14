@@ -27,9 +27,18 @@ export default function QrScanner({ onScan, onError }) {
                 scannerRef.current = null;
             }
 
-            // Create new instance
+            // Create new instance with Barcode Support
             try {
-                html5QrCode = new Html5Qrcode(elementId, { verbose: false });
+                html5QrCode = new Html5Qrcode(elementId, {
+                    verbose: false,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8
+                    ]
+                });
                 scannerRef.current = html5QrCode;
             } catch (err) {
                 console.error("New Instance Error", err);
@@ -37,11 +46,11 @@ export default function QrScanner({ onScan, onError }) {
             }
 
             const config = {
-                fps: 15, // Higher durability
-                qrbox: { width: 500, height: 200 }, // Wider Scan Area for long ID barcodes
-                aspectRatio: 1.0,
+                fps: 24, // Higher frequency for precision
+                qrbox: { width: 450, height: 150 }, // Optimized for linear barcodes
+                // DISABLE native detector if it's causing misreads
                 experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
+                    useBarCodeDetectorIfSupported: false
                 }
             };
 

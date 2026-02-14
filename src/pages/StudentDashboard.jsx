@@ -136,15 +136,14 @@ export default function StudentDashboard() {
                         <ShieldCheck size={22} className="text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none hidden xs:block font-display">AttendX Student</h1>
-                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none xs:hidden">AttendX</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none font-display">AttendX</h1>
                         <p className="text-[11px] text-slate-500 font-semibold tracking-wide uppercase mt-1">My Campus Portal</p>
                     </div>
                 </div>
 
-                {/* Centered Logo */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                    <img src={gniLogo} alt="GNI Logo" className="h-14 w-auto object-contain mix-blend-multiply" />
+                {/* Centered Logo - Always visible now */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <img src={gniLogo} alt="GNI Logo" className="h-11 sm:h-14 w-auto object-contain mix-blend-multiply" />
                 </div>
 
                 <div className="flex items-center gap-4 flex-1 justify-end">
@@ -217,13 +216,35 @@ export default function StudentDashboard() {
                 </div>
             </aside>
 
-            {/* Mobile Bottom Nav */}
-            <nav className="md:hidden fixed bottom-6 left-6 right-6 bg-white/90 backdrop-blur-xl border border-white/20 px-6 py-4 z-40 flex justify-between items-center shadow-2xl shadow-slate-200/50 rounded-2xl ring-1 ring-black/5">
-                <NavTab id="home" label="Home" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <NavTab id="timetable" label="Time" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <div className="w-[1px] h-8 bg-slate-100 mx-2"></div>
-                <NavTab id="learnify" label="AI Tutor" icon={BrainCircuit} activeTab={activeTab} setActiveTab={setActiveTab} />
+            {/* 4. Mobile Bottom Navigation - Glass Dock */}
+            <nav className="md:hidden fixed bottom-5 left-5 right-5 bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl z-40 flex justify-between items-center px-4 py-2.5 ring-1 ring-gray-900/5">
+                <NavTab id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
+                <NavTab id="timetable" label="Schedule" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+                {/* Special Middle Button for History or AI */}
+                <div className="relative -top-2">
+                    <button
+                        onClick={() => setActiveTab('learnify')}
+                        className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transform hover:scale-105 transition-all duration-300 ${activeTab === 'learnify' ? 'bg-indigo-600 text-white shadow-indigo-300' : 'bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50'}`}
+                    >
+                        <BrainCircuit size={22} className={activeTab === 'learnify' ? 'animate-pulse' : ''} />
+                    </button>
+                    {activeTab === 'learnify' && (
+                        <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-indigo-600 uppercase tracking-tighter">Learnify</span>
+                    )}
+                </div>
+
                 <NavTab id="history" label="History" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+                {/* Profile Trigger on Mobile too */}
+                <button
+                    onClick={() => setIsProfileOpen(true)}
+                    className="flex flex-col items-center gap-1 transition-all duration-300 min-w-[3rem]"
+                >
+                    <div className="p-2 rounded-xl text-slate-400 hover:bg-slate-50">
+                        <User size={22} />
+                    </div>
+                </button>
             </nav>
         </div>
     );
@@ -253,13 +274,19 @@ function NavTab({ id, label, icon: Icon, activeTab, setActiveTab }) {
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${isActive ? 'text-indigo-600 scale-110' : 'text-slate-400 hover:text-indigo-500'
-                }`}
+            className={`relative flex flex-col items-center gap-1 transition-all duration-300 min-w-[3.5rem] group`}
         >
-            <div className={`p-1 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-50' : 'bg-transparent'}`}>
-                <Icon size={isActive ? 22 : 20} strokeWidth={isActive ? 2.5 : 2} />
+            <div className={`p-2.5 rounded-2xl transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${isActive
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 -translate-y-4 scale-110 rotate-2'
+                : 'text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'
+                }`}>
+                <Icon size={isActive ? 20 : 22} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            {isActive && <span className="w-1 h-1 bg-indigo-600 rounded-full absolute -bottom-2 animate-bounce"></span>}
+
+            <span className={`text-[10px] font-black transition-all duration-300 absolute -bottom-2 ${isActive ? 'opacity-100 translate-y-0 text-indigo-700 scale-100' : 'opacity-0 translate-y-2 scale-90'
+                }`}>
+                {label}
+            </span>
         </button>
     );
 }

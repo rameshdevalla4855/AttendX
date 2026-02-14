@@ -74,6 +74,11 @@ export default function FacultyDashboard() {
         fetchProfile();
     }, [currentUser]);
 
+    // Reset sub-views when tab changes
+    useEffect(() => {
+        setSelectedSession(null);
+    }, [activeTab]);
+
     // Real-time Status Listener
     useEffect(() => {
         if (currentUser?.uid) {
@@ -221,14 +226,14 @@ export default function FacultyDashboard() {
                         <Briefcase size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX Faculty</h1>
+                        <h1 className="text-lg font-bold text-gray-900 leading-none">AttendX</h1>
                         <p className="text-[10px] text-gray-500 font-semibold tracking-wide uppercase mt-0.5">Academic Portal</p>
                     </div>
                 </div>
 
-                {/* Centered Logo */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                    <img src={gniLogo} alt="GNI Logo" className="h-12 w-auto object-contain mix-blend-multiply" />
+                {/* Centered Logo - Always visible now */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <img src={gniLogo} alt="GNI Logo" className="h-11 sm:h-14 w-auto object-contain mix-blend-multiply" />
                 </div>
 
                 <div className="flex items-center gap-3 flex-1 justify-end">
@@ -268,12 +273,12 @@ export default function FacultyDashboard() {
                 </div>
             </aside>
 
-            {/* Mobile Bottom Nav */}
-            <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/20 shadow-xl rounded-2xl z-40 flex justify-between items-center px-4 py-2 ring-1 ring-gray-900/5">
-                <NavTab id="home" label="Home" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
+            {/* 4. Mobile Bottom Navigation - Glass Dock */}
+            <nav className="md:hidden fixed bottom-5 left-5 right-5 bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl z-40 flex justify-between items-center px-4 py-2.5 ring-1 ring-gray-900/5">
+                <NavTab id="home" label="Overview" icon={Home} activeTab={activeTab} setActiveTab={setActiveTab} />
                 <NavTab id="schedule" label="Schedule" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                {/* Mobile Scan Button */}
+                {/* Mobile Scan Button - Floating Center */}
                 <div className="relative -top-6">
                     <button
                         onClick={() => { setIsScannerOpen(true); setScannedProfile(null); }}
@@ -284,7 +289,16 @@ export default function FacultyDashboard() {
                 </div>
 
                 <NavTab id="history" label="History" icon={History} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <div className="w-10"></div> {/* Spacer for symmetry if needed, or just 3 tabs + scanner */}
+
+                {/* Profile Trigger on Mobile */}
+                <button
+                    onClick={() => setIsProfileOpen(true)}
+                    className="flex flex-col items-center gap-1 transition-all duration-300 min-w-[3rem]"
+                >
+                    <div className="p-2 rounded-xl text-slate-400 hover:bg-slate-50">
+                        <User size={22} />
+                    </div>
+                </button>
             </nav>
 
             {/* Scanner Modal */}
@@ -385,22 +399,21 @@ function SidebarItem({ id, label, icon: Icon, activeTab, setActiveTab }) {
     );
 }
 
-// Mobile Nav Tab Component
 function NavTab({ id, label, icon: Icon, activeTab, setActiveTab }) {
     const isActive = activeTab === id;
     return (
         <button
             onClick={() => setActiveTab(id)}
-            className={`relative flex flex-col items-center gap-1 transition-all duration-300 min-w-[4rem] group`}
+            className={`relative flex flex-col items-center gap-1 transition-all duration-300 min-w-[3.5rem] group`}
         >
             <div className={`p-2.5 rounded-2xl transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${isActive
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 -translate-y-4 scale-110 rotate-3'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-200 -translate-y-4 scale-110 rotate-2'
                 : 'text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-600'
                 }`}>
-                <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={isActive ? 20 : 22} strokeWidth={isActive ? 2.5 : 2} />
             </div>
 
-            <span className={`text-[10px] font-bold transition-all duration-300 absolute -bottom-2 ${isActive ? 'opacity-100 translate-y-0 text-purple-700 scale-100' : 'opacity-0 translate-y-2 scale-90'
+            <span className={`text-[10px] font-black transition-all duration-300 absolute -bottom-2 ${isActive ? 'opacity-100 translate-y-0 text-purple-700 scale-100' : 'opacity-0 translate-y-2 scale-90'
                 }`}>
                 {label}
             </span>

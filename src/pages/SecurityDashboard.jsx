@@ -111,7 +111,7 @@ export default function SecurityDashboard() {
             <div className={`flex-1 flex flex-col relative overflow-hidden transition-colors duration-500 ${activeTab === 'scan' ? 'bg-black' : 'bg-slate-50'}`}>
 
                 {/* Header Overlay for Scanner, Solid for others */}
-                <header className={`px-6 py-4 flex justify-between items-center z-20 ${activeTab === 'scan' ? 'absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent text-white' : 'bg-white border-b border-gray-200 text-gray-900'
+                <header className={`relative px-6 py-4 flex justify-between items-center z-20 ${activeTab === 'scan' ? 'absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent text-white' : 'bg-white border-b border-gray-200 text-gray-900'
                     }`}>
                     <div className="flex items-center gap-3 flex-1">
                         {/* Mobile Profile Toggle */}
@@ -130,9 +130,9 @@ export default function SecurityDashboard() {
                         </div>
                     </div>
 
-                    {/* Centered Logo */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                        <img src={gniLogo} alt="GNI Logo" className={`h-12 w-auto object-contain ${activeTab === 'scan' ? 'brightness-0 invert' : 'mix-blend-multiply'}`} />
+                    {/* Centered Logo - Always Visible */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                        <img src={gniLogo} alt="GNI Logo" className={`h-9 md:h-12 w-auto object-contain ${activeTab === 'scan' ? 'brightness-0 invert' : 'mix-blend-multiply'}`} />
                     </div>
 
                     <div className="flex items-center gap-3 flex-1 justify-end">
